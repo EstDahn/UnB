@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<script src="20-rvest-basico_files/libs/clipboard/clipboard.min.js"></script>
+<script src="20-rvest-basico_files/libs/quarto-html/tabby.min.js"></script>
+<script src="20-rvest-basico_files/libs/quarto-html/popper.min.js"></script>
+<script src="20-rvest-basico_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="20-rvest-basico_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="20-rvest-basico_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="20-rvest-basico_files/libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.32">
+
+  <meta name="author" content="Prof.&nbsp;Donald M. Pianto">
+  <title>Web Scraping (Aula 1): A Mecânica do rvest</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="20-rvest-basico_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="20-rvest-basico_files/libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      { color: #003b4f; background-color: #f1f3f5; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #003b4f; } /* Normal */
+    code span.al { color: #ad0000; } /* Alert */
+    code span.an { color: #5e5e5e; } /* Annotation */
+    code span.at { color: #657422; } /* Attribute */
+    code span.bn { color: #ad0000; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #003b4f; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #20794d; } /* Char */
+    code span.cn { color: #8f5902; } /* Constant */
+    code span.co { color: #5e5e5e; } /* Comment */
+    code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
+    code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
+    code span.dt { color: #ad0000; } /* DataType */
+    code span.dv { color: #ad0000; } /* DecVal */
+    code span.er { color: #ad0000; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #ad0000; } /* Float */
+    code span.fu { color: #4758ab; } /* Function */
+    code span.im { color: #00769e; } /* Import */
+    code span.in { color: #5e5e5e; } /* Information */
+    code span.kw { color: #003b4f; font-weight: bold; } /* Keyword */
+    code span.op { color: #5e5e5e; } /* Operator */
+    code span.ot { color: #003b4f; } /* Other */
+    code span.pp { color: #ad0000; } /* Preprocessor */
+    code span.sc { color: #5e5e5e; } /* SpecialChar */
+    code span.ss { color: #20794d; } /* SpecialString */
+    code span.st { color: #20794d; } /* String */
+    code span.va { color: #111111; } /* Variable */
+    code span.vs { color: #20794d; } /* VerbatimString */
+    code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="20-rvest-basico_files/libs/revealjs/dist/theme/quarto-2c1b5f745a11cfad616ebade4a4a7d24.css">
+  <link href="20-rvest-basico_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="20-rvest-basico_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="20-rvest-basico_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="20-rvest-basico_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Web Scraping (Aula 1): A Mecânica do <code>rvest</code></h1>
+  <p class="subtitle">Computação em Estatística II: R (Baseado no R4DS Cap. 24)</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Prof.&nbsp;Donald M. Pianto 
+</div>
+</div>
+</div>
+
+  <p class="date">28 de outubro de 2025</p>
+</section>
+<section id="introdução-ao-web-scraping" class="slide level2">
+<h2>1. Introdução ao Web Scraping</h2>
+<h3 id="o-que-é">O que é?</h3>
+<p><strong>Web scraping</strong> (raspagem de dados) é o processo de extrair dados de websites de forma automática.</p>
+<p>Usamos o pacote <code>rvest</code>, que é desenhado para funcionar de forma integrada com o <code>tidyverse</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href=""></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-2"><a href=""></a><span class="fu">library</span>(rvest)</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section class="slide level2">
+
+<h3 id="ética-e-legalidade">1.1 Ética e Legalidade</h3>
+<p>Antes de começar, é crucial discutir a ética.</p>
+<ul>
+<li><strong>Respeite o <code>robots.txt</code>:</strong> Muitos sites têm um ficheiro <code>www.NOMEDOSITE.com/robots.txt</code> que diz quais partes do site os <em>bots</em> (como o seu script) <strong>não</strong> devem aceder.</li>
+<li><strong>Não sobrecarregue o servidor:</strong> O seu script pode enviar centenas de pedidos por segundo. Limite a taxa de pedidos (ex: <code>Sys.sleep(1)</code> entre as requisições).</li>
+<li><strong>Verifique os Termos de Serviço:</strong> Alguns sites proíbem explicitamente o scraping.</li>
+<li><strong>Use APIs primeiro:</strong> Se um site oferece uma API (Interface de Programação de Aplicações), use-a! É mais estável e legal.</li>
+</ul>
+</section>
+<section id="o-básico-de-html" class="slide level2">
+<h2>2. O Básico de HTML</h2>
+<p>Para extrair dados de uma página web, precisamos de entender a sua linguagem: <strong>HTML</strong> (HyperText Markup Language).</p>
+<p>Um ficheiro HTML é um documento de texto com <em>tags</em> (etiquetas) que definem a estrutura.</p>
+<h3 id="anatomia-de-um-elemento-html">Anatomia de um Elemento HTML</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode numberSource html number-lines code-with-copy"><code class="sourceCode html"><span id="cb2-1"><a href=""></a><span class="dt">&lt;</span><span class="kw">tag</span><span class="ot"> atributo1</span><span class="op">=</span><span class="st">"valor1"</span><span class="ot"> atributo2</span><span class="op">=</span><span class="st">"valor2"</span><span class="dt">&gt;</span></span>
+<span id="cb2-2"><a href=""></a>  Conteúdo de texto</span>
+<span id="cb2-3"><a href=""></a><span class="dt">&lt;/</span><span class="kw">tag</span><span class="dt">&gt;</span></span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><strong>Tag:</strong> Define o tipo de elemento (ex: <code>&lt;p&gt;</code> para parágrafo, <code>&lt;a&gt;</code> para link).</li>
+<li><strong>Atributo:</strong> Propriedades do elemento (ex: <code>href="url_do_link"</code> no <code>&lt;a&gt;</code>).</li>
+<li><strong>Conteúdo:</strong> O texto visível na página.</li>
+</ul>
+</section>
+<section class="slide level2 scrollable">
+
+<h3 id="seletores-css-o-endereço-dos-dados">Seletores CSS: O Endereço dos Dados</h3>
+<p>Para dizer ao <code>rvest</code> o que extrair, usamos <strong>Seletores CSS</strong>. Os três seletores básicos são:</p>
+<ol type="1">
+<li><strong>Por Tag:</strong> <code>p</code> (seleciona todos os parágrafos <code>&lt;p&gt;</code>)</li>
+<li><strong>Por Classe:</strong> <code>.minha-classe</code> (seleciona <code>&lt;tag class="minha-classe"&gt;</code>)</li>
+<li><strong>Por ID:</strong> <code>#meu-id</code> (seleciona <code>&lt;tag id="meu-id"&gt;</code>)</li>
+</ol>
+</section>
+<section id="o-fluxo-de-trabalho-do-rvest" class="slide level2 scrollable">
+<h2>3. O Fluxo de Trabalho do <code>rvest</code></h2>
+<p>O scraping com <code>rvest</code> segue 4 passos:</p>
+<ol type="1">
+<li><code>read_html(url)</code>: Lê a página web.</li>
+<li><code>html_elements(seletor)</code>: Seleciona múltiplos nós/elementos na página.</li>
+<li><code>html_text2()</code>: Extrai o texto.</li>
+<li><code>html_attr(atributo)</code>: Extrai o valor de um atributo.</li>
+</ol>
+</section>
+<section class="slide level2">
+
+<h3 id="ler-html">3.1 Ler HTML</h3>
+<p>Primeiro, lemos o HTML.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href=""></a>html <span class="ot">&lt;-</span> <span class="fu">read_html</span>(<span class="st">"https://rvest.tidyverse.org/articles/starwars.html"</span>)</span>
+<span id="cb3-2"><a href=""></a>html</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>{html_document}
+&lt;html lang="en"&gt;
+[1] &lt;head&gt;\n&lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8 ...
+[2] &lt;body&gt;\n    &lt;a href="#container" class="visually-hidden-focusable"&gt;Skip t ...</code></pre>
+</div>
+</div>
+<p>Abre o código fonte da página web e examine ele.</p>
+</section>
+<section class="slide level2">
+
+<h3 id="selecionar-nós-com-html_elements">3.2 Selecionar Nós com <code>html_elements()</code></h3>
+<p>Selecionamos os títulos dos filmes, que estão dentro de tags <code>&lt;h2&gt;</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href=""></a><span class="co"># O seletor "h2" é muito genérico e captura "On this page"</span></span>
+<span id="cb5-2"><a href=""></a>titulos_elementos_ruim <span class="ot">&lt;-</span> html <span class="sc">|&gt;</span> </span>
+<span id="cb5-3"><a href=""></a>  <span class="fu">html_elements</span>(<span class="st">"h2"</span>)</span>
+<span id="cb5-4"><a href=""></a></span>
+<span id="cb5-5"><a href=""></a>titulos_elementos_ruim <span class="sc">|&gt;</span> <span class="fu">html_text2</span>()</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "The Phantom Menace"      "Attack of the Clones"   
+[3] "Revenge of the Sith"     "A New Hope"             
+[5] "The Empire Strikes Back" "Return of the Jedi"     
+[7] "The Force Awakens"       "On this page"           </code></pre>
+</div>
+</div>
+</section>
+<section class="slide level2">
+
+<h3 id="extrair-texto-forma-correta">3.3 Extrair Texto (Forma Correta)</h3>
+<p>Para corrigir isso, usamos um seletor mais específico. Os títulos dos filmes têm um atributo <code>data-id</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href=""></a><span class="co"># Seletor de atributo: seleciona &lt;h2&gt; que TENHA um atributo 'data-id'</span></span>
+<span id="cb7-2"><a href=""></a>seletor_titulo_correto <span class="ot">&lt;-</span> <span class="st">"h2[data-id]"</span></span>
+<span id="cb7-3"><a href=""></a></span>
+<span id="cb7-4"><a href=""></a>titulos_elementos <span class="ot">&lt;-</span> html <span class="sc">|&gt;</span> </span>
+<span id="cb7-5"><a href=""></a>  <span class="fu">html_elements</span>(seletor_titulo_correto)</span>
+<span id="cb7-6"><a href=""></a></span>
+<span id="cb7-7"><a href=""></a>titulos_elementos <span class="sc">|&gt;</span> </span>
+<span id="cb7-8"><a href=""></a>  <span class="fu">html_text2</span>()</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "The Phantom Menace"      "Attack of the Clones"   
+[3] "Revenge of the Sith"     "A New Hope"             
+[5] "The Empire Strikes Back" "Return of the Jedi"     
+[7] "The Force Awakens"      </code></pre>
+</div>
+</div>
+</section>
+<section id="estudo-de-caso-filmes-star-wars" class="slide level2">
+<h2>4. Estudo de Caso: Filmes Star Wars</h2>
+<p>Vamos juntar tudo para extrair o título, diretor e data de lançamento de todos os filmes da página.</p>
+<h3 id="títulos">4.1 Títulos</h3>
+<p>Usamos o seletor correto que descobrimos.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href=""></a>titulos <span class="ot">&lt;-</span> html <span class="sc">|&gt;</span> </span>
+<span id="cb9-2"><a href=""></a>  <span class="fu">html_elements</span>(<span class="st">"h2[data-id]"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb9-3"><a href=""></a>  <span class="fu">html_text2</span>()</span>
+<span id="cb9-4"><a href=""></a></span>
+<span id="cb9-5"><a href=""></a>titulos</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "The Phantom Menace"      "Attack of the Clones"   
+[3] "Revenge of the Sith"     "A New Hope"             
+[5] "The Empire Strikes Back" "Return of the Jedi"     
+[7] "The Force Awakens"      </code></pre>
+</div>
+</div>
+</section>
+<section class="slide level2">
+
+<h3 id="datas-e-diretores-a-abordagem-correta">4.2 Datas e Diretores (A Abordagem Correta)</h3>
+<p>No ficheiro <code>starwars.html</code>, as datas e os diretores estão em tags <code>&lt;p&gt;</code> que são filhos diretos de <code>&lt;section&gt;</code>.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode numberSource html number-lines code-with-copy"><code class="sourceCode html"><span id="cb11-1"><a href=""></a><span class="dt">&lt;</span><span class="kw">section</span><span class="dt">&gt;</span></span>
+<span id="cb11-2"><a href=""></a>  <span class="dt">&lt;</span><span class="kw">h2</span><span class="ot"> data-id</span><span class="op">=</span><span class="st">"1"</span><span class="dt">&gt;</span>A New Hope<span class="dt">&lt;/</span><span class="kw">h2</span><span class="dt">&gt;</span></span>
+<span id="cb11-3"><a href=""></a>  <span class="dt">&lt;</span><span class="kw">p</span><span class="dt">&gt;</span>Released: 1977-05-25<span class="dt">&lt;/</span><span class="kw">p</span><span class="dt">&gt;</span></span>
+<span id="cb11-4"><a href=""></a>  <span class="dt">&lt;</span><span class="kw">p</span><span class="dt">&gt;</span>Director: <span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"director"</span><span class="dt">&gt;</span>George Lucas<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;&lt;/</span><span class="kw">p</span><span class="dt">&gt;</span></span>
+<span id="cb11-5"><a href=""></a>  <span class="dt">&lt;</span><span class="kw">div</span><span class="ot"> class</span><span class="op">=</span><span class="st">"crawl"</span><span class="dt">&gt;</span></span>
+<span id="cb11-6"><a href=""></a>    <span class="dt">&lt;</span><span class="kw">p</span><span class="dt">&gt;</span>...texto do crawl...<span class="dt">&lt;/</span><span class="kw">p</span><span class="dt">&gt;</span></span>
+<span id="cb11-7"><a href=""></a>  <span class="dt">&lt;/</span><span class="kw">div</span><span class="dt">&gt;</span></span>
+<span id="cb11-8"><a href=""></a><span class="dt">&lt;/</span><span class="kw">section</span><span class="dt">&gt;</span></span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Podemos extrair <em>todos</em> esses parágrafos e depois usar <code>stringr</code> para filtrar e limpar.</p>
+</section>
+<section class="slide level2">
+
+<h3 id="extrair-todos-os-parágrafos-relevantes">4.2.1 Extrair Todos os Parágrafos Relevantes</h3>
+<p>O seletor <code>section &gt; p</code> seleciona apenas os <code>&lt;p&gt;</code> que são filhos diretos de <code>&lt;section&gt;</code>, ignorando o parágrafo do “crawl” que está dentro de um <code>&lt;div&gt;</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href=""></a>paragrafos_texto <span class="ot">&lt;-</span> html <span class="sc">|&gt;</span> </span>
+<span id="cb12-2"><a href=""></a>  <span class="fu">html_elements</span>(<span class="st">"section &gt; p"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb12-3"><a href=""></a>  <span class="fu">html_text2</span>()</span>
+<span id="cb12-4"><a href=""></a></span>
+<span id="cb12-5"><a href=""></a><span class="fu">head</span>(paragrafos_texto)</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Released: 1999-05-19"   "Director: George Lucas" "Released: 2002-05-16"  
+[4] "Director: George Lucas" "Released: 2005-05-19"   "Director: George Lucas"</code></pre>
+</div>
+</div>
+<p>Temos um vetor de 14 elementos, alternando entre data e diretor.</p>
+</section>
+<section class="slide level2">
+
+<h3 id="separar-datas-e-diretores">4.2.2 Separar Datas e Diretores</h3>
+<p>Agora usamos <code>str_subset</code> para filtrar o vetor de texto e <code>str_remove</code> para limpar os prefixos.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href=""></a><span class="co"># Filtrar apenas as datas e limpar</span></span>
+<span id="cb14-2"><a href=""></a>datas <span class="ot">&lt;-</span> paragrafos_texto <span class="sc">|&gt;</span> </span>
+<span id="cb14-3"><a href=""></a>  <span class="fu">str_subset</span>(<span class="st">"^Released: "</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb14-4"><a href=""></a>  <span class="fu">str_remove</span>(<span class="st">"Released: "</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb14-5"><a href=""></a>  <span class="fu">str_trim</span>()</span>
+<span id="cb14-6"><a href=""></a></span>
+<span id="cb14-7"><a href=""></a>datas</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "1999-05-19" "2002-05-16" "2005-05-19" "1977-05-25" "1980-05-17"
+[6] "1983-05-25" "2015-12-11"</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href=""></a><span class="co"># Filtrar apenas os diretores e limpar</span></span>
+<span id="cb16-2"><a href=""></a>diretores <span class="ot">&lt;-</span> paragrafos_texto <span class="sc">|&gt;</span> </span>
+<span id="cb16-3"><a href=""></a>  <span class="fu">str_subset</span>(<span class="st">"^Director: "</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb16-4"><a href=""></a>  <span class="fu">str_remove</span>(<span class="st">"Director: "</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb16-5"><a href=""></a>  <span class="fu">str_trim</span>()</span>
+<span id="cb16-6"><a href=""></a></span>
+<span id="cb16-7"><a href=""></a>diretores</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "George Lucas"     "George Lucas"     "George Lucas"     "George Lucas"    
+[5] "Irvin Kershner"   "Richard Marquand" "J. J. Abrams"    </code></pre>
+</div>
+</div>
+</section>
+<section class="slide level2">
+
+<h3 id="juntar-tudo-num-tibble">4.3 Juntar Tudo num Tibble</h3>
+<p>Agora que temos três vetores limpos e do mesmo tamanho (7 elementos cada), podemos criar o nosso data frame.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href=""></a>star_wars_df <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb18-2"><a href=""></a>  <span class="at">titulo =</span> titulos,</span>
+<span id="cb18-3"><a href=""></a>  <span class="at">diretor =</span> diretores,</span>
+<span id="cb18-4"><a href=""></a>  <span class="at">data_lancamento =</span> <span class="fu">as.Date</span>(datas)</span>
+<span id="cb18-5"><a href=""></a>)</span>
+<span id="cb18-6"><a href=""></a></span>
+<span id="cb18-7"><a href=""></a>star_wars_df</span></code><button title="Copiar para a área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 7 × 3
+  titulo                  diretor          data_lancamento
+  &lt;chr&gt;                   &lt;chr&gt;            &lt;date&gt;         
+1 The Phantom Menace      George Lucas     1999-05-19     
+2 Attack of the Clones    George Lucas     2002-05-16     
+3 Revenge of the Sith     George Lucas     2005-05-19     
+4 A New Hope              George Lucas     1977-05-25     
+5 The Empire Strikes Back Irvin Kershner   1980-05-17     
+6 Return of the Jedi      Richard Marquand 1983-05-25     
+7 The Force Awakens       J. J. Abrams     2015-12-11     </code></pre>
+</div>
+</div>
+</section>
+<section id="próxima-aula" class="slide level2 scrollable">
+<h2>5. Próxima Aula</h2>
+<p>Na próxima aula, vamos aprender:</p>
+<ol type="1">
+<li>Como “descobrir” quais seletores usar em <em>qualquer</em> site, usando a ferramenta “Inspecionar Elemento” do navegador.</li>
+<li>Seletores CSS mais avançados.</li>
+<li>Como lidar com problemas do mundo real, como raspar dados de múltiplas páginas (paginação).</li>
+</ol>
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="20-rvest-basico_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="20-rvest-basico_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1050,
+
+        height: 700,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    
+
+    <script>
+
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+
+      // slide changes (different for each slide format).
+
+      (function () {
+
+        // dispatch for htmlwidgets
+
+        function fireSlideEnter() {
+
+          const event = window.document.createEvent("Event");
+
+          event.initEvent("slideenter", true, true);
+
+          window.document.dispatchEvent(event);
+
+        }
+
+    
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+
+          fireSlideEnter();
+
+    
+
+          // dispatch for shiny
+
+          if (window.jQuery) {
+
+            if (previousSlide) {
+
+              window.jQuery(previousSlide).trigger("hidden");
+
+            }
+
+            if (currentSlide) {
+
+              window.jQuery(currentSlide).trigger("shown");
+
+            }
+
+          }
+
+        }
+
+    
+
+        // hookup for slidy
+
+        if (window.w3c_slidy) {
+
+          window.w3c_slidy.add_observer(function (slide_num) {
+
+            // slide_num starts at position 1
+
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+
+          });
+
+        }
+
+    
+
+      })();
+
+    </script>
+
+    
+
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copiada");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copiada");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

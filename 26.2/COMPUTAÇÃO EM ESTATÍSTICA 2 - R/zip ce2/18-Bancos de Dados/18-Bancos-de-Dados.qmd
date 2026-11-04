@@ -1,0 +1,690 @@
+---
+title: "R4DS Capítulo 21: Bancos de Dados"
+author: "IA Gemini instruída por dmp"
+date: "2025-10-21"
+date-format: "D [de] MMMM [de] YYYY"
+# format:
+#   revealjs:
+#     theme: simple
+#     slide-number: true
+#     chalkboard: false
+#     scrollable: true
+#     self-contained: true
+#     embed-resources: true
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 2
+lang: pt
+execute:
+  echo: true
+  warning: true 
+  message: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE)
+# Criar diretório para duckdb se não existir, para evitar erro no writeTable
+if (!dir.exists("duckdb_files")) {
+  dir.create("duckdb_files")
+}
+```
+
+## 21.1 Introdução
+
+Muitos dados são armazenados em bancos de dados (databases), tornando essencial saber como acessá-los diretamente, em vez de depender de cópias estáticas como arquivos `.csv`.
+
+Neste capítulo, aprenderemos:
+
+* O básico do pacote `DBI` para conectar a um banco de dados e obter dados via consultas SQL.
+* Sobre o `dbplyr`, um pacote que traduz código `dplyr` para SQL, facilitando a interação com bancos de dados sem escrever SQL diretamente (inicialmente).
+
+SQL (Structured Query Language) é a língua franca dos bancos de dados.
+
+---
+
+### 21.1.1 Pré-requisitos
+
+Utilizaremos os pacotes `DBI` (interface de baixo nível) e `dbplyr` (interface de alto nível que traduz `dplyr` para SQL). Apesar de não ser explicitamente carregado, o pacote `duckdb` deve estar instalado.
+
+```{r prerequisitos_bd}
+library(DBI)
+library(dbplyr)
+library(tidyverse)
+library(dados) # Para os datasets de exemplo
+```
+
+---
+
+## 21.2 O Básico Sobre Bancos de Dados
+
+Um banco de dados pode ser visto como uma coleção de data frames, chamados **tabelas**.
+
+**Diferenças entre data frames (em R) e tabelas de banco de dados:**
+
+* **Armazenamento:** Tabelas são armazenadas em disco (podem ser muito grandes); data frames são armazenados na memória (limitados pela RAM).
+* **Índices:** Tabelas quase sempre têm índices para busca rápida de linhas; data frames R (exceto `data.table`) geralmente não.
+* **Otimização:**
+    * Bancos de dados clássicos (orientados à linha) são otimizados para coleta rápida de dados.
+    * Bancos de dados modernos (orientados à coluna) são otimizados para análise de dados existentes.
+
+---
+
+### Tipos de Sistemas de Gerenciamento de Banco de Dados (SGBD)
+
+* **Cliente-servidor:** Rodam em um servidor central (ex: PostgreSQL, MariaDB, SQL Server, Oracle). Bons para compartilhamento.
+* **Na Nuvem (Cloud):** Similares ao cliente-servidor, mas na nuvem (ex: Snowflake, Amazon RedShift, Google BigQuery). Escaláveis para grandes volumes.
+* **No-processo (In-process):** Rodam inteiramente no seu computador (ex: SQLite, duckdb). Ótimos para uso individual com grandes datasets.
+
+---
+
+## 21.3 Conectando a um Banco de Dados
+
+Para conectar a um banco de dados pelo R, você usa um par de pacotes:
+
+1.  **`DBI`:** Fornece funções genéricas para conectar, enviar dados, executar SQL, etc.
+2.  **Pacote específico do SGBD:** Traduz comandos `DBI` para o SGBD específico (ex: `RPostgres` para PostgreSQL, `RMariaDB` para MariaDB/MySQL).
+    * Se não houver pacote específico, `odbc` pode ser usado (requer configuração de driver ODBC).
+
+A conexão é feita com `DBI::dbConnect()`. O primeiro argumento seleciona o SGBD, os seguintes especificam detalhes da conexão (localização, credenciais).
+
+---
+
+### Exemplos de Conexão (Conceituais)
+
+```r
+# Exemplo para MariaDB (requer RMariaDB e um servidor MariaDB/MySQL)
+# con_mariadb <- DBI::dbConnect(
+#   RMariaDB::MariaDB(), 
+#   username = "foo" 
+#   # Outros argumentos como password, host, dbname podem ser necessários
+# )
+
+# Exemplo para PostgreSQL (requer RPostgres e um servidor PostgreSQL)
+# con_postgres <- DBI::dbConnect(
+#   RPostgres::Postgres(), 
+#   hostname = "bancodados.minhaempresa.com", 
+#   port = 1234
+#   # Outros argumentos como user, password, dbname podem ser necessários
+# )
+```
+
+Os detalhes variam muito. Consulte a documentação do pacote do SGBD, DBAs ou colegas.
+
+---
+
+### 21.3.1 Neste Livro: Usando `duckdb`
+
+Para facilitar o aprendizado, usaremos `duckdb`, um SGBD no-processo que vem em um pacote R.
+Por padrão, cria um banco de dados temporário em memória, limpo ao sair do R.
+
+```{r conectar_duckdb_memoria}
+# Conexão a um banco de dados duckdb temporário em memória
+con <- DBI::dbConnect(duckdb::duckdb())
+print(con)
+```
+
+Para projetos reais, salve o banco de dados em um arquivo persistente:
+(Usaremos um diretório específico para este exemplo para manter os arquivos organizados)
+
+```{r conectar_duckdb_persistente, eval=TRUE}
+# Caminho para o arquivo do banco de dados duckdb
+# Usando tempdir() para este exemplo, para não criar arquivos no projeto do usuário
+# Em um projeto real, seria algo como "duckdb_files/meu_banco.duckdb"
+db_file_path <- file.path(tempdir(), "meu_banco_r4ds.duckdb")
+con_persistente <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_file_path)
+print(con_persistente)
+```
+
+*Nota: Para os exemplos seguintes, usaremos a conexão em memória `con`.*
+
+---
+
+### 21.3.2 Carregando Alguns Dados
+
+Adicionaremos os datasets `milhas` e `diamante` do pacote `dados` ao nosso banco de dados em memória usando `DBI::dbWriteTable()`.
+
+```{r carregar_dados_db}
+dbWriteTable(con, "milhas", dados::milhas)
+dbWriteTable(con, "diamante", dados::diamante)
+```
+
+Para carregar dados de CSVs diretamente no `duckdb` de forma eficiente em projetos reais, veja `duckdb_read_csv()` e `duckdb_register_arrow()`.
+
+---
+
+### 21.3.3 O Básico do DBI
+
+* `dbListTables()`: Lista todas as tabelas no banco de dados.
+* `dbReadTable()`: Retorna o conteúdo de uma tabela como um `data.frame`.
+
+```{r basico_dbi_listar_ler}
+dbListTables(con)
+
+con |> 
+  dbReadTable("diamante") |> 
+  as_tibble() |>
+  head()
+```
+
+Se você sabe SQL, use `dbGetQuery()` para executar uma consulta:
+
+```{r basico_dbi_getquery}
+sql_exemplo <- "
+  SELECT quilate, corte, transparencia, cor, preco 
+  FROM diamante 
+  WHERE preco > 15000
+"
+as_tibble(dbGetQuery(con, sql_exemplo)) |> head()
+```
+
+---
+
+## 21.4 O Básico do `dbplyr`
+
+`dbplyr` permite que você escreva código `dplyr`, que ele traduz para SQL.
+Use `tbl()` para criar um objeto que representa uma tabela do banco de dados:
+
+```{r dbplyr_tbl}
+diamantes_bd <- tbl(con, "diamante")
+diamantes_bd
+```
+
+---
+
+#### Acessando Tabelas com Esquemas/Catálogos
+
+Em bancos de dados grandes, tabelas são organizadas em esquemas (schemas) e catálogos (catalogs).
+
+```r
+# diamantes_bd_schema <- tbl(con, in_schema("vendas", "diamante"))
+# diamantes_bd_catalogo <- tbl(con, in_catalog("america_norte", "vendas", "diamante"))
+```
+
+(Estes são exemplos conceituais, pois nosso `duckdb` não tem essa estrutura).
+
+Também é possível usar seu próprio SQL como ponto de partida:
+
+```r
+# diamantes_bd_sql <- tbl(con, sql("SELECT * FROM diamante"))
+```
+
+---
+
+#### Avaliação Preguiçosa (Lazy Evaluation)
+
+Objetos `tbl` de banco de dados são "preguiçosos". Operações `dplyr` não são executadas imediatamente; `dbplyr` apenas registra a sequência.
+
+```{r dbplyr_lazy_eval}
+grandes_diamantes_bd <- diamantes_bd |> 
+  filter(preco > 15000) |> 
+  select(quilate:transparencia, preco)
+
+grandes_diamantes_bd
+```
+
+Note que o número de linhas é desconhecido (`??`).
+
+---
+
+#### Vendo o SQL Gerado com `show_query()`
+
+```{r dbplyr_show_query}
+grandes_diamantes_bd |>
+  show_query()
+```
+
+Esta é uma ótima maneira de aprender SQL se você já conhece `dplyr`.
+
+---
+
+#### Trazendo Dados para o R com `collect()`
+
+`collect()` executa a consulta SQL e traz os resultados para o R como um `tibble`.
+
+```{r dbplyr_collect}
+grandes_diamantes <- grandes_diamantes_bd |> 
+  collect()
+
+grandes_diamantes |> head()
+class(grandes_diamantes)
+```
+
+Geralmente, use `dbplyr` para filtrar e agregar no banco de dados, depois `collect()` para trazer um subconjunto menor para o R para análises mais complexas ou visualizações.
+
+---
+
+## 21.5 SQL (através do `dbplyr`)
+
+Vamos explorar a relação entre `dplyr` e SQL usando os datasets `voos` e `avioes`.
+
+```{r copiar_voos_avioes_db}
+# Nota de tradução R4DS: O pacote dbplyr tem dbplyr::copy_nycflights13().
+# Aqui, usamos os dados traduzidos do pacote 'dados'.
+dbWriteTable(con, name = "voos", value = dados::voos, overwrite = TRUE) # overwrite para caso já exista
+dbWriteTable(con, name = "avioes", value = dados::avioes, overwrite = TRUE)
+
+# Criando objetos tbl para interagir com as tabelas no banco de dados
+voos_bd <- tbl(con, "voos")
+avioes_bd <- tbl(con, "avioes")
+```
+
+---
+
+### 21.5.1 O Básico do SQL
+
+* **Declarações (Statements):** Componentes de alto nível (ex: `CREATE`, `INSERT`, `SELECT`). Focaremos em `SELECT` (consultas).
+* **Cláusulas (Clauses):** Uma consulta é formada por cláusulas. Cinco importantes:
+    1.  `SELECT`: Quais colunas retornar.
+    2.  `FROM`: De qual(is) tabela(s) obter os dados.
+    3.  `WHERE`: Condições para filtrar linhas.
+    4.  `ORDER BY`: Como ordenar as linhas retornadas.
+    5.  `GROUP BY`: Como agregar os dados.
+
+Toda consulta precisa de `SELECT` e `FROM`. A mais simples: `SELECT * FROM tabela`.
+
+```{r sql_basico_select_all}
+voos_bd |> show_query()
+avioes_bd |> show_query()
+```
+
+---
+
+#### `WHERE` e `ORDER BY`
+
+Controlam quais linhas são incluídas e sua ordem.
+
+```{r sql_basico_where_orderby}
+voos_bd |> 
+  filter(destino == "IAH") |> 
+  arrange(atraso_saida) |>
+  show_query()
+```
+
+---
+
+#### `GROUP BY`
+
+Converte a consulta em uma sumarização, permitindo agregações.
+
+```{r sql_basico_groupby}
+voos_bd |> 
+  group_by(destino) |> 
+  summarize(atraso_medio_saida = mean(atraso_saida, na.rm = TRUE)) |> 
+  show_query()
+```
+
+---
+
+#### Diferenças Principais: `dplyr` vs SQL
+
+1.  **Case (Maiúsculas/Minúsculas):** SQL geralmente não diferencia (ex: `select` é o mesmo que `SELECT`). Convenção: palavras-chave SQL em MAIÚSCULAS.
+2.  **Ordem das Cláusulas:** No SQL, a ordem é fixa: `SELECT`, `FROM`, `WHERE`, `GROUP BY`, `ORDER BY`. A ordem de avaliação é diferente (FROM, WHERE, GROUP BY, SELECT, ORDER BY).
+
+*Nota: SQL é um padrão, mas cada SGBD tem variações. `dbplyr` tenta lidar com isso.*
+
+---
+
+### 21.5.2 `SELECT` (Cláusula SQL)
+
+Equivalente a `select()`, `mutate()`, `rename()`, `relocate()` e `summarize()` do `dplyr`.
+
+**Tradução de `select()`, `rename()`, `relocate()`:**
+
+```{r sql_select_rename_relocate}
+avioes_bd |> 
+  select(codigo_cauda, tipo, fabricante, modelo, ano) |> 
+  show_query()
+
+avioes_bd |> 
+  select(codigo_cauda, tipo, fabricante, modelo, ano) |> 
+  rename(ano_construcao = ano) |> 
+  show_query() # Renomear usa AS no SQL
+
+avioes_bd |> 
+  select(codigo_cauda, tipo, fabricante, modelo, ano) |> 
+  relocate(fabricante, modelo, .before = tipo) |> 
+  show_query()
+```
+
+*Nota sobre aspas em nomes de colunas: `dbplyr` pode adicionar aspas (ex: `"ano"`) se o nome for uma palavra reservada no SGBD.*
+
+---
+
+**Tradução de `mutate()`:**
+Cada nova variável se torna uma expressão no `SELECT`.
+
+```{r sql_mutate}
+voos_bd |> 
+  mutate(
+    velocidade = distancia / (tempo_voo / 60)
+  ) |> 
+  show_query()
+```
+
+---
+
+### 21.5.3 `FROM`
+
+Define a fonte dos dados. Ficará mais interessante com `JOIN`s.
+
+### 21.5.4 `GROUP BY`
+
+`group_by()` do `dplyr` traduz para a cláusula `GROUP BY`.
+`summarize()` do `dplyr` contribui para a cláusula `SELECT` com funções de agregação.
+
+```{r sql_groupby_summarize}
+diamantes_bd |> 
+  group_by(corte) |> 
+  summarize(
+    n = n(),
+    avg_price = mean(preco, na.rm = TRUE)
+  ) |> 
+  show_query()
+```
+
+---
+
+### 21.5.5 `WHERE`
+
+`filter()` do `dplyr` traduz para a cláusula `WHERE`.
+
+```{r sql_where}
+voos_bd |> 
+  filter(destino == "IAH" | destino == "HOU") |> 
+  show_query()
+
+voos_bd |> 
+  filter(atraso_chegada > 0 & atraso_chegada < 20) |> 
+  show_query()
+```
+
+**Detalhes Importantes:**
+
+* `|` (dplyr) vira `OR` (SQL); `&` (dplyr) vira `AND` (SQL).
+* SQL usa `=` para comparação (não `==`).
+* SQL usa aspas simples `'string'` para strings literais. Aspas duplas `"identificador"` são para nomes de colunas/tabelas (varia por SGBD).
+* `%in%` (dplyr) vira `IN` (SQL).
+
+```{r sql_where_in}
+voos_bd |> 
+  filter(destino %in% c("IAH", "HOU")) |> 
+  show_query()
+```
+
+---
+
+#### `NULL` vs `NA`
+
+SQL usa `NULL` onde R usa `NA`. `NULL` é ignorado em sumarizações SQL.
+`dbplyr` avisa sobre isso ao usar funções de agregação sem `na.rm = TRUE`.
+
+```{r sql_null_na_summarize, message=TRUE}
+# O warning sobre "Missing values are always removed..." é esperado aqui.
+voos_bd |> 
+  group_by(destino) |> 
+  summarize(atraso = mean(atraso_chegada)) |>
+  head(3) |> 
+  collect() 
+```
+
+Filtrando `NULL`s (equivalente a `!is.na()`):
+
+```{r sql_where_is_not_null}
+voos_bd |> 
+  filter(!is.na(atraso_saida)) |> 
+  show_query()
+```
+
+---
+
+#### Cláusula `HAVING`
+
+Se você usa `filter()` *após* um `summarize()`, `dbplyr` gera uma cláusula `HAVING`.
+`WHERE` é avaliado *antes* de `GROUP BY` e `SELECT` (com agregações). `HAVING` é avaliado *depois*.
+
+```{r sql_having}
+diamantes_bd |> 
+  group_by(corte) |> 
+  summarize(n = n()) |> 
+  filter(n > 100) |> 
+  show_query()
+```
+
+---
+
+### 21.5.6 `ORDER BY`
+
+`arrange()` do `dplyr` traduz diretamente para `ORDER BY`.
+`desc()` vira `DESC`.
+
+```{r sql_orderby}
+voos_bd |> 
+  arrange(ano, mes, dia, desc(atraso_saida)) |> 
+  show_query()
+```
+
+---
+
+### 21.5.7 Subconsultas (Subqueries)
+
+Às vezes, um pipeline `dplyr` não pode ser traduzido para uma única declaração `SELECT` e requer uma **subconsulta**.
+
+Isto acontece, por exemplo, quando expressões na cláusula `SELECT` referenciam colunas que acabaram de ser criadas na mesma cláusula `SELECT`, ou quando você filtra por uma coluna recém-criada.
+
+```{r sql_subquery_mutate}
+voos_bd |> 
+  mutate(
+    ano1 = ano + 1,
+    ano2 = ano1 + 1 
+  ) |> 
+  show_query()
+```{r sql_subquery_filter}
+voos_bd |> 
+  mutate(ano1 = ano + 1) |> 
+  filter(ano1 == 2014) |> 
+  show_query()
+```
+
+---
+
+### 21.5.8 Uniões (Joins)
+
+Joins em `dplyr` são muito parecidos com joins SQL.
+
+```{r sql_left_join}
+voos_bd |> 
+  left_join(avioes_bd |> rename(ano_construcao = ano), 
+            by = c("cauda" = "codigo_cauda")) |> 
+  show_query()
+```
+
+A principal coisa a se notar aqui é a sintaxe: as uniões SQL usam sub-cláusulas da cláusula `FROM` para associar tabelas adicionais, usando `ON` para definir como as tabelas estão relacionadas.
+
+Outros joins (`inner_join`, `right_join`, `full_join`) têm traduções SQL diretas (`INNER JOIN`, `RIGHT JOIN`, `FULL JOIN`).
+
+*Nota: Para cenários com muitas tabelas interconectadas, o pacote `dm` pode ser muito útil.*
+
+---
+
+### 21.5.9 Outros Verbos
+
+`dbplyr` traduz outros verbos como `distinct()`, `slice_*()`, `intersect()`, e algumas funções `tidyr` como `pivot_longer()` e `pivot_wider()`.
+Consulte a documentação do `dbplyr` para a lista completa: [https://dbplyr.tidyverse.org/reference/](https://dbplyr.tidyverse.org/reference/)
+
+---
+
+### 21.5.10 Exercícios (para discussão/casa)
+
+1.  Em que se traduz `distinct()`? E `head()` (ou `slice_head()`)?
+2.  Explique o que cada um desses comandos SQL fazem e tente recriá-los usando `dbplyr`.
+    ```sql
+    -- SQL Exemplo 1
+    SELECT * FROM voos
+    WHERE atraso_saida < atraso_chegada
+
+    -- SQL Exemplo 2
+    SELECT *, distancia / (tempo_voo / 60) AS velocidade
+    FROM voos
+    ```
+
+---
+
+## 21.6 Tradução de Funções do R para SQL
+
+Como funções R dentro de `summarize()` ou `mutate()` (ex: `mean(x)`) são traduzidas para SQL?
+
+**Funções de Ajuda (para demonstração):**
+
+```{r funcoes_ajuda_consulta}
+consulta_summarize <- function(df, ...) {
+  df |> 
+    summarize(...) |> 
+    show_query()
+}
+consulta_mutate <- function(df, ..., .keep = "none") {
+  df |> 
+    mutate(..., .keep = .keep) |> 
+    show_query()
+}
+```
+
+---
+
+### Funções de Sumarização
+
+Algumas traduções são simples (`mean()` -> `AVG()`), outras mais complexas (`median()`).
+
+```{r sql_traducao_sumarizacao, message=TRUE}
+# O warning sobre .groups é esperado aqui.
+voos_bd |> 
+  group_by(ano, mes, dia) |>  
+  consulta_summarize(
+    media = mean(atraso_chegada, na.rm = TRUE),
+    mediana = median(atraso_chegada, na.rm = TRUE) # duckdb suporta MEDIAN()
+  )
+```
+
+---
+
+### Funções de Janela (Window Functions)
+
+Funções de sumarização usadas em `mutate()` se tornam **funções de janela** no SQL, usando a cláusula `OVER`.
+O agrupamento (`group_by` do dplyr) vira `PARTITION BY` dentro do `OVER`.
+
+```{r sql_traducao_janela_mean}
+voos_bd |> 
+  group_by(ano, mes, dia) |>  
+  consulta_mutate(
+    media = mean(atraso_chegada, na.rm = TRUE),
+    .keep = "used" 
+  )
+```
+
+---
+
+#### Funções `lead()` e `lag()`
+
+Também são funções de janela. `arrange()` no `dplyr` se traduz para `ORDER BY` dentro da cláusula `OVER`.
+*Importante: Tabelas SQL não têm ordem intrínseca; `ORDER BY` é crucial para `lead`/`lag`.*
+
+```{r sql_traducao_lead_lag}
+# Para este exemplo de show_query, assumimos que uma coluna como 'data_hora' ou 
+# uma combinação ordenável (como dia, horario_saida) existe e é usada no arrange.
+# O R4DS usa uma coluna 'data_hora' que seria criada previamente.
+voos_bd |> 
+  group_by(destino) |>  
+  arrange(ano, mes, dia, horario_saida) |> # Ordenar por colunas existentes
+  consulta_mutate(
+    lead_atraso = lead(atraso_chegada), 
+    lag_atraso = lag(atraso_chegada),   
+    .keep = "used"
+  )
+```
+
+---
+
+#### `if_else()` e `case_when()` -> `CASE WHEN`
+
+Estas funções `dplyr` traduzem para a expressão `CASE WHEN` do SQL.
+
+```{r sql_traducao_if_else_case_when}
+voos_bd |> 
+  consulta_mutate(
+    descricao_atraso = if_else(atraso_chegada > 0, "atrasado", "no horario") 
+  )
+
+voos_bd |> 
+  consulta_mutate(
+    descricao_detalhada = 
+      case_when(
+        atraso_chegada < -5 ~ "adiantado", 
+        atraso_chegada < 5 ~ "no horario",
+        atraso_chegada >= 5 ~ "atrasado",
+        TRUE ~ "status desconhecido" 
+      )
+  )
+```
+
+---
+
+#### `cut()` -> `CASE WHEN`
+
+A função `cut()` também é traduzida para `CASE WHEN`.
+
+```{r sql_traducao_cut}
+voos_bd |> 
+  consulta_mutate(
+    categoria_atraso =  cut( 
+      atraso_chegada, 
+      breaks = c(-Inf, -5, 5, Inf), 
+      labels = c("adiantado", "no horario", "atrasado")
+    )
+  )
+```
+
+Muitas funções comuns de string e data/hora também são traduzidas. Veja `vignette("translation-function", package = "dbplyr")`.
+
+---
+
+## 21.7 Resumo
+
+* Acessamos dados de bancos de dados usando `DBI` e `dbplyr`.
+* `dbplyr` traduz código `dplyr` para SQL.
+* SQL é a linguagem padrão para interagir com bancos de dados.
+* Principais cláusulas SQL: `SELECT`, `FROM`, `WHERE`, `GROUP BY`, `ORDER BY`, `HAVING`.
+* Funções `dplyr` têm correspondentes em SQL (ex: `mean` -> `AVG`, `if_else` -> `CASE WHEN`).
+* Funções de janela no SQL (`OVER (PARTITION BY ... ORDER BY ...)`).
+
+**Para aprender mais SQL:**
+
+* "SQL for Data Scientists" de Renée M. P. Teate.
+* "Practical SQL" de Anthony DeBarros.
+
+Próximo capítulo: `arrow` para trabalhar com grandes arquivos em disco.
+
+---
+
+## Notas de Rodapé (do R4DS)
+
+1.  SQL é pronunciado "s"-"q"-"l" (ou "sequel").
+2.  Normalmente, `dbConnect()` é a única função usada do pacote cliente do SGBD (ex: `RPostgres::Postgres()`), então `::` é recomendado em vez de `library()`.
+3.  `dbListTables()` lista tabelas que você tem permissão para ver.
+4.  Nota de tradução R4DS: `dbplyr::copy_nycflights13()` copia tabelas originais (inglês). Usamos `dbWriteTable()` com dados traduzidos do pacote `dados`.
+5.  `SELECT` pode ser tanto uma declaração quanto uma cláusula. Usaremos "consulta SELECT".
+6.  Tecnicamente, apenas `SELECT` é necessário (ex: `SELECT 1+1`). Para trabalhar com dados, `FROM` é necessário.
+7.  `dplyr::group_by()` foi inspirado na cláusula SQL `GROUP BY`.
+
+```{r desconectar_db, include=FALSE}
+# Desconectar das conexões de banco de dados ao final
+DBI::dbDisconnect(con, shutdown = TRUE) # shutdown=TRUE para duckdb em memória
+if (exists("con_persistente")) {
+  DBI::dbDisconnect(con_persistente, shutdown = TRUE)
+  # Remover o arquivo de banco de dados temporário
+  if(file.exists(db_file_path)) {
+    unlink(db_file_path, force = TRUE)
+    try(unlink(dirname(db_file_path), recursive = FALSE), silent = TRUE)
+  }
+}
+```

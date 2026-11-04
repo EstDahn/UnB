@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Adaptativo — Aula 1: Princípios de Economia</title>
+<style>
+  :root {
+    --destaque: #bf0021;
+    --verde: #008000;
+    --azul: #0066cc;
+    --cinza: #646464;
+    --amarelo: #ffc107;
+    --laranja: #e67e22;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: #333;
+    line-height: 1.6;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 16px; }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, var(--destaque), #8b0015);
+    color: white; text-align: center; padding: 32px 16px;
+  }
+  header h1 { font-size: 1.6em; margin-bottom: 4px; }
+  header p { font-size: 0.95em; opacity: 0.9; }
+
+  /* TELA INICIAL */
+  #tela-inicio { text-align: center; padding: 40px 16px; }
+  #tela-inicio p { margin-bottom: 20px; font-size: 1.05em; color: var(--cinza); }
+  .btn-principal {
+    background: var(--destaque); color: white; border: none;
+    padding: 14px 40px; font-size: 1.1em; border-radius: 8px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-principal:hover { background: #8b0015; }
+
+  /* PAINEL DE PROGRESSO */
+  #painel-progresso {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 6px; margin: 16px 0; padding: 12px;
+    background: var(--card); border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .principio-badge {
+    text-align: center; padding: 6px 2px; border-radius: 6px;
+    font-size: 0.72em; font-weight: 600; transition: all 0.3s;
+    border: 2px solid #ddd; background: #f5f5f5; color: var(--cinza);
+  }
+  .principio-badge.acertou {
+    background: #d4edda; border-color: var(--verde); color: var(--verde);
+  }
+  .principio-badge.errou {
+    background: #f8d7da; border-color: var(--destaque); color: var(--destaque);
+  }
+  .principio-badge.reforco {
+    background: #fff3cd; border-color: var(--amarelo); color: #856404;
+  }
+  .principio-badge .num { font-size: 1.3em; display: block; }
+
+  /* CARD DE QUESTÃO */
+  #card-questao {
+    background: var(--card); border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 24px; margin: 16px 0;
+  }
+  .questao-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .questao-tag {
+    background: var(--azul); color: white; padding: 4px 12px;
+    border-radius: 20px; font-size: 0.8em; font-weight: 600;
+  }
+  .questao-tag.reforco-tag {
+    background: var(--laranja);
+  }
+  .questao-contador { font-size: 0.85em; color: var(--cinza); }
+  .questao-contexto {
+    background: #e8f4fd; border-left: 4px solid var(--azul);
+    padding: 12px 16px; margin-bottom: 16px; border-radius: 0 8px 8px 0;
+    font-size: 0.95em;
+  }
+  .questao-texto {
+    font-size: 1.05em; font-weight: 500; margin-bottom: 20px;
+  }
+
+  /* ALTERNATIVAS */
+  .alternativas { list-style: none; }
+  .alternativa {
+    display: block; width: 100%; text-align: left;
+    padding: 12px 16px; margin-bottom: 8px;
+    border: 2px solid #ddd; border-radius: 8px;
+    background: white; cursor: pointer; font-size: 0.95em;
+    transition: all 0.2s;
+  }
+  .alternativa:hover:not(.disabled) {
+    border-color: var(--azul); background: #f0f7ff;
+  }
+  .alternativa.correta {
+    border-color: var(--verde); background: #d4edda;
+    font-weight: 600;
+  }
+  .alternativa.incorreta {
+    border-color: var(--destaque); background: #f8d7da;
+  }
+  .alternativa.disabled { cursor: default; opacity: 0.7; }
+  .alternativa.disabled.correta { opacity: 1; }
+
+  /* FEEDBACK */
+  .feedback {
+    margin-top: 16px; padding: 16px; border-radius: 8px;
+    display: none; font-size: 0.95em;
+  }
+  .feedback.acerto {
+    background: #d4edda; border: 1px solid var(--verde); color: #155724;
+  }
+  .feedback.erro {
+    background: #f8d7da; border: 1px solid var(--destaque); color: #721c24;
+  }
+  .feedback h4 { margin-bottom: 6px; }
+
+  .btn-proximo {
+    display: none; margin-top: 16px; padding: 10px 28px;
+    background: var(--azul); color: white; border: none;
+    border-radius: 8px; font-size: 1em; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-proximo:hover { background: #004a99; }
+
+  /* TELA FINAL */
+  #tela-resultado {
+    display: none; text-align: center; padding: 32px 16px;
+  }
+  #tela-resultado h2 { margin-bottom: 8px; color: var(--destaque); }
+  .nota-final {
+    font-size: 3em; font-weight: 700; margin: 16px 0;
+  }
+  .nota-final.boa { color: var(--verde); }
+  .nota-final.media { color: var(--laranja); }
+  .nota-final.baixa { color: var(--destaque); }
+
+  #resultado-detalhes {
+    text-align: left; margin: 24px 0; background: var(--card);
+    border-radius: 10px; padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  #resultado-detalhes h3 { margin-bottom: 12px; color: var(--azul); }
+
+  .resultado-item {
+    display: flex; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid #eee; font-size: 0.92em;
+  }
+  .resultado-item:last-child { border-bottom: none; }
+  .resultado-icone { font-size: 1.3em; margin-right: 10px; width: 28px; text-align: center; }
+  .resultado-nome { flex: 1; }
+  .resultado-status { font-weight: 600; font-size: 0.85em; padding: 2px 10px; border-radius: 12px; }
+  .status-dominado { background: #d4edda; color: #155724; }
+  .status-reforcar { background: #fff3cd; color: #856404; }
+  .status-revisar { background: #f8d7da; color: #721c24; }
+  .status-pendente { background: #e2e3e5; color: #383d41; }
+
+  .dica-estudo {
+    margin-top: 20px; padding: 16px; background: #e8f4fd;
+    border-radius: 8px; text-align: left; font-size: 0.93em;
+  }
+  .dica-estudo h4 { color: var(--azul); margin-bottom: 8px; }
+  .dica-estudo ul { margin-left: 20px; }
+  .dica-estudo li { margin-bottom: 4px; }
+
+  .btn-reiniciar {
+    margin-top: 20px; padding: 12px 32px;
+    background: var(--destaque); color: white; border: none;
+    border-radius: 8px; font-size: 1em; cursor: pointer;
+  }
+
+  /* RESPONSIVO */
+  @media (max-width: 500px) {
+    #painel-progresso { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .principio-badge { font-size: 0.65em; padding: 4px 1px; }
+    header h1 { font-size: 1.3em; }
+    .questao-texto { font-size: 1em; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Princípios de Economia</h1>
+  <p>Quiz Adaptativo — Aula 1 · Introdução à Economia · UnB · Prof. Rafael Terra</p>
+</header>
+
+<div class="container">
+
+  <!-- TELA INICIAL -->
+  <div id="tela-inicio">
+    <p>Este quiz avalia sua compreensão dos <strong>10 Princípios de Economia</strong> (Mankiw, Cap. 1).<br>
+    Se você errar uma questão, receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong> sobre o mesmo conceito.</p>
+    <button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+  </div>
+
+  <!-- PAINEL DE PROGRESSO -->
+  <div id="painel-progresso" style="display:none;"></div>
+
+  <!-- CARD DE QUESTÃO -->
+  <div id="card-questao" style="display:none;">
+    <div class="questao-header">
+      <span class="questao-tag" id="tag-principio"></span>
+      <span class="questao-contador" id="contador"></span>
+    </div>
+    <div class="questao-contexto" id="contexto"></div>
+    <div class="questao-texto" id="texto-questao"></div>
+    <ul class="alternativas" id="alternativas"></ul>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+  </div>
+
+  <!-- TELA DE RESULTADO -->
+  <div id="tela-resultado">
+    <h2>Resultado Final</h2>
+    <div class="nota-final" id="nota-final"></div>
+    <p id="msg-resultado"></p>
+    <div id="resultado-detalhes"></div>
+    <div class="dica-estudo" id="dica-estudo" style="display:none;"></div>
+    <button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+  </div>
+
+</div>
+
+<script>
+// =====================================================================
+// BANCO DE QUESTÕES
+// =====================================================================
+const BANCO = [
+  // ---- PRINCÍPIO 1: Trade-offs ----
+  {
+    principio: 1,
+    tipo: "principal",
+    contexto: "Lucas recebeu uma proposta de emprego integral (R$ 2.500/mês), mas teria que trancar a faculdade. Seu estágio atual paga R$ 1.200/mês.",
+    texto: "O dilema de Lucas — emprego ou faculdade — é um exemplo de qual conceito econômico?",
+    alternativas: [
+      "Custo afundado",
+      "Trade-off",
+      "Externalidade",
+      "Inflação"
+    ],
+    correta: 1,
+    explicacao: "Um <strong>trade-off</strong> ocorre quando, para obter algo, precisamos abrir mão de outra coisa. Lucas não pode ter emprego integral e faculdade ao mesmo tempo — precisa escolher."
+  },
+  {
+    principio: 1,
+    tipo: "reforco",
+    contexto: "O governo federal precisa decidir como distribuir o orçamento entre diferentes áreas.",
+    texto: "O governo decide aumentar os gastos com defesa. Para isso, precisa reduzir investimentos em educação. Isso ilustra:",
+    alternativas: [
+      "Poder de mercado",
+      "Inflação de custos",
+      "Trade-off entre defesa e educação",
+      "Custo de oportunidade nulo"
+    ],
+    correta: 2,
+    explicacao: "Governos também enfrentam <strong>trade-offs</strong>: recursos são limitados, então gastar mais em uma área significa gastar menos em outra. Não existe almoço grátis!"
+  },
+
+  // ---- PRINCÍPIO 2: Custo de Oportunidade ----
+  {
+    principio: 2,
+    tipo: "principal",
+    contexto: "Lucas ganha R$ 1.200/mês no estágio. A proposta de emprego integral paga R$ 2.500/mês. A faculdade custa R$ 500/mês (mensalidade, livros, transporte).",
+    texto: "Qual é o custo econômico total MENSAL de Lucas permanecer na faculdade?",
+    alternativas: [
+      "R$ 500 (só a mensalidade)",
+      "R$ 1.300 (diferencial de renda)",
+      "R$ 1.800 (mensalidade + diferencial de renda)",
+      "R$ 2.500 (salário do emprego)"
+    ],
+    correta: 2,
+    explicacao: "O custo econômico total = custos explícitos (R$ 500) + custo de oportunidade (R$ 2.500 − R$ 1.200 = R$ 1.300). Total: <strong>R$ 1.800/mês</strong>. Moradia e alimentação não entram, pois existem em qualquer cenário."
+  },
+  {
+    principio: 2,
+    tipo: "reforco",
+    contexto: "Maria ganha R$ 2.000/mês. Está pensando em fazer um curso noturno que custa R$ 500/mês. Para isso, deixaria de fazer horas extras que rendem R$ 800/mês.",
+    texto: "Qual é o custo de oportunidade total do curso para Maria?",
+    alternativas: [
+      "R$ 500 (só a mensalidade)",
+      "R$ 800 (só as horas extras)",
+      "R$ 1.300 (mensalidade + horas extras)",
+      "R$ 2.000 (salário inteiro)"
+    ],
+    correta: 2,
+    explicacao: "O custo total = R$ 500 (mensalidade) + R$ 800 (horas extras perdidas) = <strong>R$ 1.300</strong>. O salário de R$ 2.000 não entra porque Maria continua recebendo — ela só perde as horas extras."
+  },
+
+  // ---- PRINCÍPIO 3: Pensamento Marginal ----
+  {
+    principio: 3,
+    tipo: "principal",
+    contexto: "Dona Marta vende quentinhas: custo R$ 8, preço R$ 15, faz 30/dia. Um escritório quer mais 10/dia, com custo extra de embalagem (R$ 2 cada) e ônibus (R$ 5/dia).",
+    texto: "O lucro extra (marginal) de Marta ao aceitar as 10 quentinhas adicionais é:",
+    alternativas: [
+      "R$ 150 (receita total extra)",
+      "R$ 70 (receita menos custo das quentinhas)",
+      "R$ 45 (receita menos todos os custos extras)",
+      "R$ 0 (não vale a pena)"
+    ],
+    correta: 2,
+    explicacao: "Receita extra: 10 × R$ 15 = R$ 150. Custo extra: 10 × R$ 8 (quentinhas) + 10 × R$ 2 (embalagens) + R$ 5 (ônibus) = R$ 105. Lucro marginal: 150 − 105 = <strong>R$ 45/dia</strong>. Vale a pena!"
+  },
+  {
+    principio: 3,
+    tipo: "reforco",
+    contexto: "Você está num rodízio de pizza e já comeu 4 fatias. A satisfação de cada fatia tem diminuído.",
+    texto: "Você deve comer a 5ª fatia se:",
+    alternativas: [
+      "Já pagou pelo rodízio, então deve comer o máximo",
+      "A satisfação extra da 5ª fatia for maior que o desconforto extra",
+      "Todos na mesa ainda estão comendo",
+      "A pizza for do sabor que você mais gosta"
+    ],
+    correta: 1,
+    explicacao: "A decisão racional compara o <strong>benefício marginal</strong> (satisfação da 5ª fatia) com o <strong>custo marginal</strong> (desconforto). O fato de já ter pago é custo afundado — não importa para a decisão!"
+  },
+
+  // ---- PRINCÍPIO 4: Incentivos ----
+  {
+    principio: 4,
+    tipo: "principal",
+    contexto: "A prefeitura oferece desconto de 30% na conta de luz para famílias que reduzirem o consumo de energia em 15%.",
+    texto: "Se o desconto fosse aumentado de 30% para 50%, o que provavelmente aconteceria?",
+    alternativas: [
+      "Menos famílias adeririam ao programa",
+      "O mesmo número de famílias aderiria",
+      "Mais famílias adeririam ao programa",
+      "Não teria nenhum efeito"
+    ],
+    correta: 2,
+    explicacao: "Quanto maior o <strong>incentivo</strong> (desconto), mais famílias se sentem motivadas a mudar de comportamento. Pessoas reagem a incentivos — é o Princípio 4!"
+  },
+  {
+    principio: 4,
+    tipo: "reforco",
+    contexto: "O Bolsa Família exige frequência escolar mínima de 85% para as crianças da família beneficiária.",
+    texto: "A exigência de frequência escolar no Bolsa Família é um exemplo de:",
+    alternativas: [
+      "Trade-off entre estudo e trabalho",
+      "Incentivo — vincula benefício a comportamento desejado",
+      "Custo afundado — o dinheiro já foi gasto",
+      "Falha de mercado — o mercado não resolve"
+    ],
+    correta: 1,
+    explicacao: "A condicionalidade do Bolsa Família é um <strong>incentivo</strong>: vincula a recompensa (dinheiro) a um comportamento desejado (manter os filhos na escola). Muda o comportamento sem proibir nada."
+  },
+
+  // ---- PRINCÍPIO 5: Comércio ----
+  {
+    principio: 5,
+    tipo: "principal",
+    contexto: "Dona Marta cozinha muito bem. Seu Jorge conserta eletrodomésticos. Marta tem um liquidificador quebrado; Jorge quer almoçar bem, mas cozinha mal.",
+    texto: "Qual a melhor solução para ambos?",
+    alternativas: [
+      "Cada um resolve seu problema sozinho",
+      "Marta aprende a consertar eletrodomésticos",
+      "Cada um se especializa no que faz melhor e troca",
+      "Jorge compra um almoço no restaurante"
+    ],
+    correta: 2,
+    explicacao: "Quando cada pessoa se <strong>especializa</strong> no que faz melhor e <strong>troca</strong>, ambas ficam em melhor situação. Marta faz quentinha para Jorge, Jorge conserta o liquidificador — todos ganham!"
+  },
+  {
+    principio: 5,
+    tipo: "reforco",
+    contexto: "O Brasil exporta soja para a China e importa eletrônicos da Coreia do Sul.",
+    texto: "Essa troca comercial entre países beneficia:",
+    alternativas: [
+      "Apenas o Brasil, que vende a soja",
+      "Apenas a Coreia, que vende os eletrônicos",
+      "Nenhum dos dois — comércio é soma zero",
+      "Ambos os países, pela especialização"
+    ],
+    correta: 3,
+    explicacao: "O comércio <strong>não é um jogo de soma zero</strong>. Cada país se especializa no que produz com mais eficiência. O Brasil produz soja melhor; a Coreia, eletrônicos. Ambos ganham com a troca!"
+  },
+
+  // ---- PRINCÍPIO 6: Mercados ----
+  {
+    principio: 6,
+    tipo: "principal",
+    contexto: "Na Vila Esperança, um empresário decidiu abrir um supermercado porque percebeu que os moradores precisavam comprar alimentos sem ir longe.",
+    texto: "O supermercado surgiu sem que nenhuma autoridade planejasse. Isso ilustra o conceito de:",
+    alternativas: [
+      "Falha de mercado",
+      "Intervenção do governo",
+      "Mão invisível — mercados organizam a economia",
+      "Externalidade positiva"
+    ],
+    correta: 2,
+    explicacao: "Adam Smith chamou de <strong>\"mão invisível\"</strong> o mecanismo pelo qual cada pessoa, ao buscar seu próprio interesse (lucro), acaba beneficiando a sociedade. Os preços coordenam tudo!"
+  },
+  {
+    principio: 6,
+    tipo: "reforco",
+    contexto: "Quando há seca e a safra de tomates cai, o preço do tomate sobe no supermercado.",
+    texto: "O aumento no preço do tomate serve como:",
+    alternativas: [
+      "Punição injusta aos consumidores",
+      "Sinal que coordena decisões — consumidores compram menos, produtores plantam mais",
+      "Falha de mercado que precisa de intervenção",
+      "Exemplo de inflação generalizada"
+    ],
+    correta: 1,
+    explicacao: "Os <strong>preços</strong> são sinais que coordenam a economia. Preço alto sinaliza escassez: consumidores reduzem o consumo e produtores têm incentivo para produzir mais. É a mão invisível em ação!"
+  },
+
+  // ---- PRINCÍPIO 7: Governo ----
+  {
+    principio: 7,
+    tipo: "principal",
+    contexto: "A Vila Esperança precisa de uma praça pública, mas nenhuma empresa privada se dispõe a construí-la porque não conseguiria cobrar pelo uso.",
+    texto: "A praça não ser construída pelo mercado é um exemplo de:",
+    alternativas: [
+      "Custo de oportunidade",
+      "Pensamento marginal",
+      "Bem público — falha de mercado",
+      "Trade-off entre eficiência e equidade"
+    ],
+    correta: 2,
+    explicacao: "A praça é um <strong>bem público</strong>: todos usam, mas ninguém quer pagar individualmente (\"problema do carona\"). O mercado falha e o governo precisa intervir, financiando com impostos."
+  },
+  {
+    principio: 7,
+    tipo: "reforco",
+    contexto: "Uma fábrica na Vila gera empregos, mas polui o ar que todos respiram.",
+    texto: "A poluição da fábrica é um exemplo de qual falha de mercado?",
+    alternativas: [
+      "Bem público",
+      "Externalidade negativa",
+      "Poder de mercado",
+      "Custo afundado"
+    ],
+    correta: 1,
+    explicacao: "A poluição é uma <strong>externalidade negativa</strong>: a fábrica impõe um custo (ar poluído) a terceiros que não participaram da decisão de produzir. O governo pode intervir com regulação ambiental."
+  },
+
+  // ---- PRINCÍPIO 8: Produtividade ----
+  {
+    principio: 8,
+    tipo: "principal",
+    contexto: "Seu Carlos (pedreiro no Brasil) e um pedreiro na Alemanha trabalham 8h/dia. O alemão ganha 5 vezes mais.",
+    texto: "A principal explicação para a diferença de renda é:",
+    alternativas: [
+      "O alemão trabalha mais horas",
+      "O alemão é mais esforçado",
+      "A Alemanha tem maior produtividade (equipamentos, tecnologia, infraestrutura)",
+      "O custo de vida na Alemanha é menor"
+    ],
+    correta: 2,
+    explicacao: "A diferença está na <strong>produtividade</strong>: o alemão tem acesso a melhores equipamentos, tecnologia, educação e infraestrutura, produzindo mais por hora de trabalho. Não é questão de esforço!"
+  },
+  {
+    principio: 8,
+    tipo: "reforco",
+    contexto: "Dois agricultores plantam milho. João usa enxada; Pedro usa trator.",
+    texto: "Pedro colhe 10 vezes mais que João no mesmo tempo. A principal causa é:",
+    alternativas: [
+      "Pedro trabalha mais horas",
+      "Pedro tem mais terra",
+      "Pedro tem maior produtividade graças ao capital (trator)",
+      "João escolheu o produto errado"
+    ],
+    correta: 2,
+    explicacao: "O <strong>capital</strong> (trator) aumenta a produtividade de Pedro. Investir em equipamentos, tecnologia e educação é o caminho para aumentar a produtividade — e, com ela, o padrão de vida."
+  },
+
+  // ---- PRINCÍPIO 9: Inflação ----
+  {
+    principio: 9,
+    tipo: "principal",
+    contexto: "Ana reclama que o lanche subiu de R$ 5 para R$ 7. Dona Marta lembra que nos anos 1990 os preços mudavam todo dia.",
+    texto: "No longo prazo, a principal causa da inflação é:",
+    alternativas: [
+      "Os comerciantes ficarem mais gananciosos",
+      "O aumento dos custos de produção",
+      "O governo emitir moeda em excesso",
+      "A queda da produtividade"
+    ],
+    correta: 2,
+    explicacao: "Segundo o Princípio 9, quando o governo coloca <strong>dinheiro demais</strong> na economia, cada real vale menos e os preços sobem de forma generalizada. Foi o que causou a hiperinflação brasileira nos anos 1980-90."
+  },
+  {
+    principio: 9,
+    tipo: "reforco",
+    contexto: "O Plano Real (1994) conseguiu controlar a hiperinflação brasileira.",
+    texto: "Qual foi a principal estratégia do Plano Real para conter a inflação?",
+    alternativas: [
+      "Congelar todos os preços por decreto",
+      "Criar nova moeda e disciplinar a política monetária",
+      "Aumentar os salários para compensar os preços",
+      "Fechar o comércio com outros países"
+    ],
+    correta: 1,
+    explicacao: "O Plano Real criou uma nova moeda (o Real) e adotou <strong>disciplina monetária</strong>: o Banco Central passou a controlar a quantidade de dinheiro na economia. Hoje, persegue uma meta de inflação (~3% ao ano)."
+  },
+
+  // ---- PRINCÍPIO 10: Inflação vs. Desemprego ----
+  {
+    principio: 10,
+    tipo: "principal",
+    contexto: "O desemprego na Vila está em 15%. Assessores querem que o prefeito gaste mais. O secretário de finanças alerta que a inflação pode subir.",
+    texto: "O dilema do prefeito ilustra o trade-off de curto prazo entre:",
+    alternativas: [
+      "Eficiência e equidade",
+      "Inflação e desemprego",
+      "Importação e exportação",
+      "Poupança e consumo"
+    ],
+    correta: 1,
+    explicacao: "No curto prazo, reduzir o desemprego (injetando dinheiro) tende a aumentar a inflação, e vice-versa. Esse <strong>trade-off entre inflação e desemprego</strong> é um dos maiores desafios da política econômica."
+  },
+  {
+    principio: 10,
+    tipo: "reforco",
+    contexto: "O Banco Central decidiu aumentar a taxa Selic (juros básicos) de 10% para 13% ao ano.",
+    texto: "O efeito esperado dessa medida no curto prazo é:",
+    alternativas: [
+      "Inflação sobe e desemprego cai",
+      "Inflação cai e desemprego pode subir",
+      "Ambos caem simultaneamente",
+      "Nenhum efeito na economia"
+    ],
+    correta: 1,
+    explicacao: "Juros mais altos desestimulam o consumo e o investimento, reduzindo a <strong>inflação</strong>. Porém, com menos atividade econômica, o <strong>desemprego</strong> pode subir. É o trade-off do Princípio 10 em ação."
+  }
+];
+
+// =====================================================================
+// NOMES DOS PRINCÍPIOS
+// =====================================================================
+const NOMES_PRINCIPIOS = {
+  1: "Trade-offs",
+  2: "Custo de Oportunidade",
+  3: "Pensamento Marginal",
+  4: "Incentivos",
+  5: "Comércio",
+  6: "Mercados",
+  7: "Governo",
+  8: "Produtividade",
+  9: "Inflação",
+  10: "Inflação vs. Desemprego"
+};
+
+// =====================================================================
+// ESTADO DO QUIZ
+// =====================================================================
+let estado = {
+  principios: {},    // { 1: {status, tentativas}, ... }
+  fila: [],          // fila de questões a exibir
+  atual: null,       // questão atual
+  indice: 0,         // índice na fila
+  totalRespondidas: 0,
+  totalAcertos: 0
+};
+
+// =====================================================================
+// FUNÇÕES
+// =====================================================================
+
+function iniciarQuiz() {
+  // Inicializar estado dos princípios
+  for (let i = 1; i <= 10; i++) {
+    estado.principios[i] = { status: "pendente", tentativas: 0, acertos: 0 };
+  }
+
+  // Montar fila com questões principais (ordem aleatória)
+  const principais = BANCO.filter(q => q.tipo === "principal");
+  embaralhar(principais);
+  estado.fila = [...principais];
+
+  document.getElementById("tela-inicio").style.display = "none";
+  document.getElementById("painel-progresso").style.display = "grid";
+  document.getElementById("card-questao").style.display = "block";
+
+  atualizarPainel();
+  exibirQuestao();
+}
+
+function embaralhar(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function atualizarPainel() {
+  const painel = document.getElementById("painel-progresso");
+  painel.innerHTML = "";
+  for (let i = 1; i <= 10; i++) {
+    const p = estado.principios[i];
+    const badge = document.createElement("div");
+    badge.className = "principio-badge " + p.status;
+    badge.innerHTML = `<span class="num">${i}</span>${NOMES_PRINCIPIOS[i]}`;
+    badge.title = `Princípio ${i}: ${NOMES_PRINCIPIOS[i]} — ${p.status}`;
+    painel.appendChild(badge);
+  }
+}
+
+function exibirQuestao() {
+  if (estado.indice >= estado.fila.length) {
+    mostrarResultado();
+    return;
+  }
+
+  const q = estado.fila[estado.indice];
+  estado.atual = q;
+
+  const tag = document.getElementById("tag-principio");
+  tag.textContent = `Princípio ${q.principio}: ${NOMES_PRINCIPIOS[q.principio]}`;
+  tag.className = "questao-tag" + (q.tipo === "reforco" ? " reforco-tag" : "");
+
+  const totalFila = estado.fila.length;
+  document.getElementById("contador").textContent =
+    `Questão ${estado.indice + 1} de ${totalFila}` + (q.tipo === "reforco" ? " (reforço)" : "");
+
+  document.getElementById("contexto").innerHTML = q.contexto;
+  document.getElementById("texto-questao").innerHTML = q.texto;
+
+  const ul = document.getElementById("alternativas");
+  ul.innerHTML = "";
+  q.alternativas.forEach((alt, i) => {
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.className = "alternativa";
+    btn.innerHTML = `<strong>${String.fromCharCode(97 + i)})</strong> ${alt}`;
+    btn.onclick = () => responder(i);
+    li.appendChild(btn);
+    ul.appendChild(li);
+  });
+
+  document.getElementById("feedback").style.display = "none";
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("btn-proximo").style.display = "none";
+
+  // Scroll suave pro card
+  document.getElementById("card-questao").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function responder(escolha) {
+  const q = estado.atual;
+  const botoes = document.querySelectorAll(".alternativa");
+  const acertou = escolha === q.correta;
+
+  // Desabilitar botões
+  botoes.forEach((btn, i) => {
+    btn.classList.add("disabled");
+    btn.onclick = null;
+    if (i === q.correta) btn.classList.add("correta");
+    if (i === escolha && !acertou) btn.classList.add("incorreta");
+  });
+
+  // Atualizar estado do princípio
+  const p = estado.principios[q.principio];
+  p.tentativas++;
+  estado.totalRespondidas++;
+
+  const fb = document.getElementById("feedback");
+
+  if (acertou) {
+    p.acertos++;
+    estado.totalAcertos++;
+    if (p.status !== "errou") p.status = "acertou";
+    else p.status = "reforco"; // errou antes, acertou no reforço
+
+    fb.className = "feedback acerto";
+    fb.innerHTML = `<h4>✓ Correto!</h4><p>${q.explicacao}</p>`;
+  } else {
+    if (q.tipo === "principal") {
+      p.status = "errou";
+      // Inserir questão de reforço na fila
+      const reforco = BANCO.find(r => r.principio === q.principio && r.tipo === "reforco");
+      if (reforco) {
+        // Inserir logo após a questão atual
+        estado.fila.splice(estado.indice + 1, 0, reforco);
+      }
+    } else {
+      p.status = "errou"; // errou o reforço também
+    }
+
+    fb.className = "feedback erro";
+    fb.innerHTML = `<h4>✗ Incorreto</h4><p>${q.explicacao}</p>` +
+      (q.tipo === "principal" ? `<p style="margin-top:8px;"><strong>→ Você receberá um exercício de reforço sobre este conceito.</strong></p>` : "");
+  }
+
+  fb.style.display = "block";
+  document.getElementById("btn-proximo").style.display = "inline-block";
+  atualizarPainel();
+}
+
+function proximaQuestao() {
+  estado.indice++;
+  exibirQuestao();
+}
+
+function mostrarResultado() {
+  document.getElementById("card-questao").style.display = "none";
+  document.getElementById("tela-resultado").style.display = "block";
+
+  const pct = Math.round((estado.totalAcertos / estado.totalRespondidas) * 100);
+  const notaEl = document.getElementById("nota-final");
+  notaEl.textContent = `${pct}%`;
+  notaEl.className = "nota-final " + (pct >= 80 ? "boa" : pct >= 50 ? "media" : "baixa");
+
+  const msgEl = document.getElementById("msg-resultado");
+  if (pct >= 80) {
+    msgEl.textContent = "Excelente! Você demonstrou boa compreensão dos princípios de economia.";
+  } else if (pct >= 50) {
+    msgEl.textContent = "Bom progresso! Alguns conceitos precisam de revisão.";
+  } else {
+    msgEl.textContent = "Há conceitos importantes para revisar. Releia as notas de aula e o Capítulo 1 do Mankiw.";
+  }
+
+  // Detalhes por princípio
+  const detalhes = document.getElementById("resultado-detalhes");
+  detalhes.innerHTML = "<h3>Desempenho por Princípio</h3>";
+
+  const revisar = [];
+  for (let i = 1; i <= 10; i++) {
+    const p = estado.principios[i];
+    let icone, statusClass, statusText;
+    if (p.status === "acertou") {
+      icone = "✅"; statusClass = "status-dominado"; statusText = "Dominado";
+    } else if (p.status === "reforco") {
+      icone = "🔄"; statusClass = "status-reforcar"; statusText = "Reforçado";
+    } else if (p.status === "errou") {
+      icone = "❌"; statusClass = "status-revisar"; statusText = "Revisar";
+      revisar.push(i);
+    } else {
+      icone = "⬜"; statusClass = "status-pendente"; statusText = "Pendente";
+    }
+
+    detalhes.innerHTML += `
+      <div class="resultado-item">
+        <span class="resultado-icone">${icone}</span>
+        <span class="resultado-nome"><strong>P${i}:</strong> ${NOMES_PRINCIPIOS[i]}</span>
+        <span class="resultado-status ${statusClass}">${statusText}</span>
+      </div>`;
+  }
+
+  // Dicas de estudo personalizadas
+  if (revisar.length > 0) {
+    const dica = document.getElementById("dica-estudo");
+    dica.style.display = "block";
+    let html = "<h4>📖 Sugestões de estudo</h4><ul>";
+    const sugestoes = {
+      1: "Releia a seção sobre trade-offs. Pense: que escolhas você fez hoje que envolveram abrir mão de algo?",
+      2: "Reveja o conceito de custo de oportunidade. Lembre-se: o custo total = custos explícitos + o que você deixou de ganhar. Moradia e alimentação não entram se existem nos dois cenários.",
+      3: "Pratique o pensamento marginal com situações do dia a dia. Pergunte-se: o benefício EXTRA vale o custo EXTRA?",
+      4: "Incentivos estão por toda parte! Identifique 3 incentivos que influenciaram suas decisões esta semana.",
+      5: "Pense em exemplos de troca/comércio na sua vida. Por que você não faz suas próprias roupas ou cultiva sua comida?",
+      6: "Observe como os preços coordenam a economia: quando algo fica escasso, o preço sobe e as pessoas ajustam seu comportamento.",
+      7: "Liste 3 situações no seu bairro onde o mercado falha (externalidades, bens públicos, monopólios). O governo intervém? Deveria?",
+      8: "Pesquise o PIB per capita de 5 países e relacione com educação e tecnologia. A produtividade explica a diferença?",
+      9: "Leia sobre a hiperinflação brasileira dos anos 1990 e o Plano Real. O que acontece quando o governo imprime dinheiro demais?",
+      10: "Pesquise a taxa Selic atual e a taxa de desemprego. O Banco Central está priorizando combater inflação ou desemprego?"
+    };
+    revisar.forEach(p => {
+      html += `<li><strong>Princípio ${p} (${NOMES_PRINCIPIOS[p]}):</strong> ${sugestoes[p]}</li>`;
+    });
+    html += "</ul>";
+    dica.innerHTML = html;
+  }
+
+  atualizarPainel();
+}
+</script>
+
+</body>
+</html>

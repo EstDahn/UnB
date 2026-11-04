@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Adaptativo — Aula 2: Pensando como um Economista</title>
+<style>
+  :root {
+    --destaque: #bf0021;
+    --verde: #008000;
+    --azul: #0066cc;
+    --cinza: #646464;
+    --amarelo: #ffc107;
+    --laranja: #e67e22;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: #333;
+    line-height: 1.6;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 16px; }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, var(--destaque), #8b0015);
+    color: white; text-align: center; padding: 32px 16px;
+  }
+  header h1 { font-size: 1.6em; margin-bottom: 4px; }
+  header p { font-size: 0.95em; opacity: 0.9; }
+
+  /* TELA INICIAL */
+  #tela-inicio { text-align: center; padding: 40px 16px; }
+  #tela-inicio p { margin-bottom: 20px; font-size: 1.05em; color: var(--cinza); }
+  .btn-principal {
+    background: var(--destaque); color: white; border: none;
+    padding: 14px 40px; font-size: 1.1em; border-radius: 8px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-principal:hover { background: #8b0015; }
+
+  /* PAINEL DE PROGRESSO */
+  #painel-progresso {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 6px; margin: 16px 0; padding: 12px;
+    background: var(--card); border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .conceito-badge {
+    text-align: center; padding: 6px 4px; border-radius: 6px;
+    font-size: 0.72em; font-weight: 600; transition: all 0.3s;
+    border: 2px solid #ddd; background: #f5f5f5; color: var(--cinza);
+  }
+  .conceito-badge.acertou {
+    background: #d4edda; border-color: var(--verde); color: var(--verde);
+  }
+  .conceito-badge.errou {
+    background: #f8d7da; border-color: var(--destaque); color: var(--destaque);
+  }
+  .conceito-badge.reforco {
+    background: #fff3cd; border-color: var(--amarelo); color: #856404;
+  }
+  .conceito-badge .num { font-size: 1.3em; display: block; }
+
+  /* CARD DE QUESTAO */
+  #card-questao {
+    background: var(--card); border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 24px; margin: 16px 0;
+  }
+  .questao-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .questao-tag {
+    background: var(--azul); color: white; padding: 4px 12px;
+    border-radius: 20px; font-size: 0.8em; font-weight: 600;
+  }
+  .questao-tag.reforco-tag {
+    background: var(--laranja);
+  }
+  .questao-contador { font-size: 0.85em; color: var(--cinza); }
+  .questao-contexto {
+    background: #e8f4fd; border-left: 4px solid var(--azul);
+    padding: 12px 16px; margin-bottom: 16px; border-radius: 0 8px 8px 0;
+    font-size: 0.95em;
+  }
+  .questao-texto {
+    font-size: 1.05em; font-weight: 500; margin-bottom: 20px;
+  }
+
+  /* ALTERNATIVAS */
+  .alternativas { list-style: none; }
+  .alternativa {
+    display: block; width: 100%; text-align: left;
+    padding: 12px 16px; margin-bottom: 8px;
+    border: 2px solid #ddd; border-radius: 8px;
+    background: white; cursor: pointer; font-size: 0.95em;
+    transition: all 0.2s;
+  }
+  .alternativa:hover:not(.disabled) {
+    border-color: var(--azul); background: #f0f7ff;
+  }
+  .alternativa.correta {
+    border-color: var(--verde); background: #d4edda;
+    font-weight: 600;
+  }
+  .alternativa.incorreta {
+    border-color: var(--destaque); background: #f8d7da;
+  }
+  .alternativa.disabled { cursor: default; opacity: 0.7; }
+  .alternativa.disabled.correta { opacity: 1; }
+
+  /* FEEDBACK */
+  .feedback {
+    margin-top: 16px; padding: 16px; border-radius: 8px;
+    display: none; font-size: 0.95em;
+  }
+  .feedback.acerto {
+    background: #d4edda; border: 1px solid var(--verde); color: #155724;
+  }
+  .feedback.erro {
+    background: #f8d7da; border: 1px solid var(--destaque); color: #721c24;
+  }
+  .feedback h4 { margin-bottom: 6px; }
+
+  .btn-proximo {
+    display: none; margin-top: 16px; padding: 10px 28px;
+    background: var(--azul); color: white; border: none;
+    border-radius: 8px; font-size: 1em; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-proximo:hover { background: #004a99; }
+
+  /* TELA FINAL */
+  #tela-resultado {
+    display: none; text-align: center; padding: 32px 16px;
+  }
+  #tela-resultado h2 { margin-bottom: 8px; color: var(--destaque); }
+  .nota-final {
+    font-size: 3em; font-weight: 700; margin: 16px 0;
+  }
+  .nota-final.boa { color: var(--verde); }
+  .nota-final.media { color: var(--laranja); }
+  .nota-final.baixa { color: var(--destaque); }
+
+  #resultado-detalhes {
+    text-align: left; margin: 24px 0; background: var(--card);
+    border-radius: 10px; padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  #resultado-detalhes h3 { margin-bottom: 12px; color: var(--azul); }
+
+  .resultado-item {
+    display: flex; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid #eee; font-size: 0.92em;
+  }
+  .resultado-item:last-child { border-bottom: none; }
+  .resultado-icone { font-size: 1.3em; margin-right: 10px; width: 28px; text-align: center; }
+  .resultado-nome { flex: 1; }
+  .resultado-status { font-weight: 600; font-size: 0.85em; padding: 2px 10px; border-radius: 12px; }
+  .status-dominado { background: #d4edda; color: #155724; }
+  .status-reforcar { background: #fff3cd; color: #856404; }
+  .status-revisar { background: #f8d7da; color: #721c24; }
+  .status-pendente { background: #e2e3e5; color: #383d41; }
+
+  .dica-estudo {
+    margin-top: 20px; padding: 16px; background: #e8f4fd;
+    border-radius: 8px; text-align: left; font-size: 0.93em;
+  }
+  .dica-estudo h4 { color: var(--azul); margin-bottom: 8px; }
+  .dica-estudo ul { margin-left: 20px; }
+  .dica-estudo li { margin-bottom: 4px; }
+
+  .btn-reiniciar {
+    margin-top: 20px; padding: 12px 32px;
+    background: var(--destaque); color: white; border: none;
+    border-radius: 8px; font-size: 1em; cursor: pointer;
+  }
+
+  /* RESPONSIVO */
+  @media (max-width: 560px) {
+    #painel-progresso { grid-template-columns: repeat(5, 1fr); gap: 3px; }
+    .conceito-badge { font-size: 0.6em; padding: 4px 2px; }
+    header h1 { font-size: 1.3em; }
+    .questao-texto { font-size: 1em; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pensando como um Economista</h1>
+  <p>Quiz Adaptativo — Aula 2 · Introdução à Economia · UnB · Prof. Rafael Terra</p>
+</header>
+
+<div class="container">
+
+  <!-- TELA INICIAL -->
+  <div id="tela-inicio">
+    <p>Este quiz avalia sua compreensão dos conceitos essenciais do <strong>Capítulo 2 — Pensando como um Economista</strong> (Mankiw).<br>
+    Se você errar uma questão, receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong> sobre o mesmo conceito.</p>
+    <button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+  </div>
+
+  <!-- PAINEL DE PROGRESSO -->
+  <div id="painel-progresso" style="display:none;"></div>
+
+  <!-- CARD DE QUESTAO -->
+  <div id="card-questao" style="display:none;">
+    <div class="questao-header">
+      <span class="questao-tag" id="tag-conceito"></span>
+      <span class="questao-contador" id="contador"></span>
+    </div>
+    <div class="questao-contexto" id="contexto"></div>
+    <div class="questao-texto" id="texto-questao"></div>
+    <ul class="alternativas" id="alternativas"></ul>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+  </div>
+
+  <!-- TELA DE RESULTADO -->
+  <div id="tela-resultado">
+    <h2>Resultado Final</h2>
+    <div class="nota-final" id="nota-final"></div>
+    <p id="msg-resultado"></p>
+    <div id="resultado-detalhes"></div>
+    <div class="dica-estudo" id="dica-estudo" style="display:none;"></div>
+    <button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+  </div>
+
+</div>
+
+<script>
+// =====================================================================
+// BANCO DE QUESTOES — 5 conceitos, 10 questões (principal + reforço)
+// =====================================================================
+var BANCO = [
+
+  // ---- CONCEITO 1: Modelos ----
+  {
+    conceito: 1,
+    tipo: "principal",
+    contexto: "Ana e Lucas estão discutindo sobre o Google Maps. Ana reclama: \"Esse mapa nem mostra todas as árvores de Brasília!\" Lucas, que estuda Economia na UnB, responde: \"Ué, Ana — e precisa? O mapa serve pra te levar do ponto A ao ponto B, não pra reproduzir cada detalhe da cidade.\"",
+    texto: "O Google Maps não mostra cada árvore, cada poste, cada buraco na calçada de Brasília. Isso torna o mapa inútil?",
+    alternativas: [
+      "Sim, porque um mapa deveria representar todos os detalhes da realidade para ser confiável",
+      "Não, porque a utilidade do mapa está justamente em simplificar a realidade, mostrando apenas o essencial para o objetivo de navegação — assim como modelos econômicos simplificam para revelar relações fundamentais",
+      "Sim, porque sem os detalhes o mapa pode levar a conclusões erradas sobre a cidade",
+      "Não, mas apenas porque a tecnologia ainda não permite incluir todos os detalhes"
+    ],
+    correta: 1,
+    explicacao: "Modelos econômicos funcionam como mapas: <strong>simplificam a realidade de propósito</strong> para destacar as relações essenciais. Um mapa que mostrasse cada árvore seria tão complexo quanto a própria cidade e impossível de usar. Da mesma forma, um modelo econômico omite detalhes para que possamos <strong>isolar e entender</strong> os mecanismos fundamentais."
+  },
+  {
+    conceito: 1,
+    tipo: "reforco",
+    contexto: "Lucas explica para o pai Carlos: \"Um modelo que tentasse incluir CADA detalhe da economia real — cada compra, cada pensamento de cada pessoa, cada grão de café vendido — seria...\"",
+    texto: "Um modelo econômico que incluísse TODOS os detalhes da realidade seria:",
+    alternativas: [
+      "O modelo perfeito, pois quanto mais detalhes, melhor a análise",
+      "Útil apenas para economistas muito experientes",
+      "Inútil — seria tão complexo quanto a própria realidade, impossível de entender ou usar para gerar previsões",
+      "Possível de construir com os supercomputadores atuais"
+    ],
+    correta: 2,
+    explicacao: "Um modelo com TODOS os detalhes seria <strong>tão complexo quanto a própria realidade</strong> — e portanto inútil. O valor de um modelo está na <strong>simplificação inteligente</strong>: selecionar as variáveis essenciais e fazer hipóteses (como <em>ceteris paribus</em>) que permitem entender as relações importantes e gerar <strong>previsões testáveis</strong>."
+  },
+
+  // ---- CONCEITO 2: FPP — Pontos ----
+  {
+    conceito: 2,
+    tipo: "principal",
+    contexto: "Carlos trabalha como pedreiro. Em uma semana, ele pode fazer no máximo <strong>3 serviços de alvenaria</strong> (levantar paredes) OU <strong>6 serviços de acabamento</strong> (pintura, reboco fino). A FPP de Carlos é uma reta ligando esses dois extremos. Nesta semana, Carlos fez <strong>1 alvenaria e 2 acabamentos</strong>.",
+    texto: "O ponto de produção de Carlos (1 alvenaria e 2 acabamentos) é eficiente, ineficiente ou impossível?",
+    alternativas: [
+      "Eficiente — está sobre a FPP, usando todos os recursos disponíveis",
+      "Impossível — está fora da FPP, Carlos não conseguiria produzir isso",
+      "Ineficiente — está dentro da FPP, pois Carlos poderia produzir mais sem sacrificar nada",
+      "Não é possível determinar sem saber o preço de cada serviço"
+    ],
+    correta: 2,
+    explicacao: "A FPP de Carlos é linear: cada alvenaria \"custa\" 2 acabamentos (6÷3 = 2). Sobre a FPP, 1 alvenaria permite até 4 acabamentos (pois 1×2 + 4 = 6). Carlos fez apenas 2 acabamentos, usando só 1×2 + 2 = 4 das suas 6 \"unidades\" de capacidade. Ele está <strong>dentro da FPP</strong> — logo, é <strong>ineficiente</strong>: poderia produzir mais de um ou ambos os serviços."
+  },
+  {
+    conceito: 2,
+    tipo: "reforco",
+    contexto: "Carlos comprou uma <strong>betoneira</strong> (misturador de concreto) e fez um <strong>curso técnico de construção civil</strong>. Agora, em uma semana, ele pode fazer no máximo <strong>5 serviços de alvenaria</strong> OU <strong>8 serviços de acabamento</strong>.",
+    texto: "O que aconteceu com a FPP de Carlos depois do investimento em capital (betoneira) e capital humano (curso)?",
+    alternativas: [
+      "A FPP se deslocou para dentro — Carlos ficou com menos opções",
+      "A FPP não mudou — novas ferramentas não alteram a capacidade produtiva",
+      "A FPP se deslocou para fora — Carlos agora pode produzir mais de ambos os serviços",
+      "A FPP girou, favorecendo só a alvenaria"
+    ],
+    correta: 2,
+    explicacao: "A FPP se desloca <strong>para fora</strong> quando há aumento de recursos ou melhoria tecnológica. A betoneira é <strong>capital físico</strong> e o curso é <strong>capital humano</strong> — ambos aumentam a produtividade de Carlos. Agora ele pode produzir mais alvenaria E mais acabamento. Pontos antes impossíveis (fora da FPP antiga) passam a ser alcançáveis."
+  },
+
+  // ---- CONCEITO 3: FPP — Custo de Oportunidade ----
+  {
+    conceito: 3,
+    tipo: "principal",
+    contexto: "Voltando à FPP original de Carlos: <strong>3 alvenarias OU 6 acabamentos</strong> por semana (FPP linear). Carlos está pensando em aceitar mais um serviço de alvenaria e quer saber o que terá de abrir mão.",
+    texto: "Na FPP de Carlos, qual é o custo de oportunidade de 1 serviço de alvenaria?",
+    alternativas: [
+      "1 acabamento — a troca é de um por um",
+      "2 acabamentos — pois a inclinação da FPP é 6÷3 = 2",
+      "3 acabamentos — pois Carlos faz 3 alvenarias no máximo",
+      "0,5 acabamento — pois 3÷6 = 0,5"
+    ],
+    correta: 1,
+    explicacao: "O custo de oportunidade é o que se abre mão para obter algo. Carlos troca entre 3 alvenarias e 6 acabamentos, então a taxa de troca é <strong>6÷3 = 2 acabamentos por alvenaria</strong>. Cada alvenaria adicional custa 2 acabamentos. (Nota: 0,5 seria o custo de oportunidade de 1 acabamento em termos de alvenaria, que é o inverso.)"
+  },
+  {
+    conceito: 3,
+    tipo: "reforco",
+    contexto: "Na aula, o professor mostrou que a FPP pode ser uma <strong>reta</strong> (custo de oportunidade constante) ou uma <strong>curva côncava</strong> (curvada para fora). Lucas perguntou: \"Professor, e se a FPP for curva, o que muda no custo de oportunidade?\"",
+    texto: "Se a FPP for côncava (curvada para fora), o que acontece com o custo de oportunidade à medida que se produz mais de um bem?",
+    alternativas: [
+      "O custo de oportunidade permanece constante — a forma da curva não importa",
+      "O custo de oportunidade diminui — fica cada vez mais barato produzir mais",
+      "O custo de oportunidade aumenta — cada unidade adicional custa mais do que a anterior",
+      "O custo de oportunidade se torna zero — a concavidade indica recursos ilimitados"
+    ],
+    correta: 2,
+    explicacao: "A FPP côncava reflete <strong>custos de oportunidade crescentes</strong>: à medida que se produz mais de um bem, cada unidade adicional exige sacrificar quantidades cada vez maiores do outro bem. Isso ocorre porque os recursos <strong>não são igualmente produtivos</strong> em todas as atividades — os mais adequados são usados primeiro, e os menos adequados são deslocados depois."
+  },
+
+  // ---- CONCEITO 4: Positivo vs Normativo ----
+  {
+    conceito: 4,
+    tipo: "principal",
+    contexto: "Lucas está organizando o que aprendeu sobre tipos de afirmações em economia. Ele anota duas frases sobre Carlos:<br>(A) \"Carlos pode fazer 3 alvenarias ou 6 acabamentos por semana.\"<br>(B) \"Carlos deveria fazer mais acabamento porque paga melhor.\"",
+    texto: "Classifique as afirmações A e B:",
+    alternativas: [
+      "Ambas são positivas — tratam da produção de Carlos, que é um fato",
+      "A é normativa e B é positiva",
+      "A é positiva (descreve a capacidade produtiva — um fato verificável) e B é normativa (expressa um juízo de valor sobre o que Carlos deveria fazer)",
+      "Ambas são normativas — expressam opinião sobre o trabalho de Carlos"
+    ],
+    correta: 2,
+    explicacao: "Afirmações <strong>positivas</strong> descrevem o mundo como ele é — podem ser verificadas com dados: \"Carlos pode fazer 3 alvenarias ou 6 acabamentos\" é um fato sobre sua capacidade produtiva. Afirmações <strong>normativas</strong> dizem como o mundo <strong>deveria</strong> ser — envolvem juízos de valor: \"deveria fazer mais acabamento\". A palavra-chave <strong>\"deveria\"</strong> é um forte indicador de afirmação normativa."
+  },
+  {
+    conceito: 4,
+    tipo: "reforco",
+    contexto: "Ana encontrou as seguintes afirmações em diferentes fontes sobre economia brasileira:",
+    texto: "Classifique: (A) \"O salário mínimo é R$ 1.518\" e (B) \"O governo deveria aumentar o Bolsa Família\". Qual classificação está correta?",
+    alternativas: [
+      "Ambas são positivas — tratam de temas econômicos reais",
+      "A é normativa (opinião sobre o salário) e B é positiva (fato sobre o programa)",
+      "Ambas são normativas — expressam opinião sobre políticas públicas",
+      "A é positiva (fato verificável na legislação) e B é normativa (juízo de valor com \"deveria\")"
+    ],
+    correta: 3,
+    explicacao: "\"O salário mínimo é R$ 1.518\" é uma afirmação <strong>positiva</strong>: descreve um fato que pode ser verificado consultando a legislação. \"O governo deveria aumentar o Bolsa Família\" é <strong>normativa</strong>: usa \"deveria\" e expressa um julgamento sobre o que é desejável, não um fato verificável. <strong>Positiva = como é. Normativa = como deveria ser.</strong>"
+  },
+
+  // ---- CONCEITO 5: Micro vs Macro ----
+  {
+    conceito: 5,
+    tipo: "principal",
+    contexto: "O professor de Lucas explicou que a <strong>Microeconomia</strong> estuda decisões de agentes individuais (pessoas, famílias, empresas) e mercados específicos, enquanto a <strong>Macroeconomia</strong> estuda a economia como um todo (PIB, inflação, desemprego do país). Lucas anota duas manchetes:<br>(A) \"Dona Marta aumentou o preço da quentinha de R$ 15 para R$ 17.\"<br>(B) \"A inflação no Brasil foi de 4,5% em 2025.\"",
+    texto: "Classifique as manchetes A e B:",
+    alternativas: [
+      "Ambas são Microeconomia — tratam de preços",
+      "A é Microeconomia (decisão de uma produtora individual sobre preço) e B é Macroeconomia (nível geral de preços do país inteiro)",
+      "A é Macroeconomia e B é Microeconomia",
+      "Ambas são Macroeconomia — afetam muitas pessoas"
+    ],
+    correta: 1,
+    explicacao: "O preço da quentinha de Dona Marta é uma decisão de uma produtora individual num mercado específico — <strong>Microeconomia</strong>. A inflação de 4,5% no Brasil é o comportamento do nível geral de preços na economia como um todo — <strong>Macroeconomia</strong>. A diferença central é: agente/mercado individual vs. economia agregada."
+  },
+  {
+    conceito: 5,
+    tipo: "reforco",
+    contexto: "Classifique cada situação abaixo como Microeconomia (decisões individuais, mercados específicos) ou Macroeconomia (economia como um todo):<br>• A diária de Carlos como pedreiro<br>• O crescimento do PIB do Brasil<br>• O preço da passagem de ônibus da Ana<br>• A taxa de desemprego nacional",
+    texto: "Qual dos temas abaixo pertence à MACROECONOMIA?",
+    alternativas: [
+      "A diária de Carlos como pedreiro — é o salário de um trabalhador individual",
+      "O preço da passagem de ônibus que Ana paga — é o preço de um serviço específico",
+      "A taxa de desemprego do Brasil — é um indicador da economia como um todo",
+      "A decisão de Dona Marta de contratar mais um ajudante — é a escolha de uma empresa individual"
+    ],
+    correta: 2,
+    explicacao: "A taxa de desemprego do Brasil é um indicador da economia <strong>como um todo</strong> — <strong>Macroeconomia</strong>. Assim como o PIB e a inflação nacional, ela mede o desempenho agregado. As demais — a diária de Carlos, a passagem da Ana, a contratação de Dona Marta — são decisões e preços de <strong>agentes individuais em mercados específicos</strong>, ou seja, <strong>Microeconomia</strong>."
+  }
+];
+
+// =====================================================================
+// NOMES DOS CONCEITOS
+// =====================================================================
+var NOMES_CONCEITOS = {
+  1: "Modelos",
+  2: "FPP: Pontos",
+  3: "FPP: Custo Oport.",
+  4: "Positivo vs Normativo",
+  5: "Micro vs Macro"
+};
+
+var TOTAL_CONCEITOS = 5;
+
+// =====================================================================
+// ESTADO DO QUIZ
+// =====================================================================
+var estado = {
+  conceitos: {},
+  fila: [],
+  atual: null,
+  indice: 0,
+  totalRespondidas: 0,
+  totalAcertos: 0
+};
+
+// =====================================================================
+// FUNCOES
+// =====================================================================
+
+function iniciarQuiz() {
+  for (var i = 1; i <= TOTAL_CONCEITOS; i++) {
+    estado.conceitos[i] = { status: "pendente", tentativas: 0, acertos: 0 };
+  }
+
+  var principais = BANCO.filter(function(q) { return q.tipo === "principal"; });
+  embaralhar(principais);
+  estado.fila = principais.slice();
+
+  document.getElementById("tela-inicio").style.display = "none";
+  document.getElementById("painel-progresso").style.display = "grid";
+  document.getElementById("card-questao").style.display = "block";
+
+  atualizarPainel();
+  exibirQuestao();
+}
+
+function embaralhar(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = temp;
+  }
+}
+
+function atualizarPainel() {
+  var painel = document.getElementById("painel-progresso");
+  painel.innerHTML = "";
+  for (var i = 1; i <= TOTAL_CONCEITOS; i++) {
+    var c = estado.conceitos[i];
+    var badge = document.createElement("div");
+    badge.className = "conceito-badge " + c.status;
+    badge.innerHTML = '<span class="num">' + i + '</span>' + NOMES_CONCEITOS[i];
+    badge.title = "Conceito " + i + ": " + NOMES_CONCEITOS[i] + " \u2014 " + c.status;
+    painel.appendChild(badge);
+  }
+}
+
+function exibirQuestao() {
+  if (estado.indice >= estado.fila.length) {
+    mostrarResultado();
+    return;
+  }
+
+  var q = estado.fila[estado.indice];
+  estado.atual = q;
+
+  var tag = document.getElementById("tag-conceito");
+  tag.textContent = NOMES_CONCEITOS[q.conceito];
+  tag.className = "questao-tag" + (q.tipo === "reforco" ? " reforco-tag" : "");
+
+  var totalFila = estado.fila.length;
+  document.getElementById("contador").textContent =
+    "Questão " + (estado.indice + 1) + " de " + totalFila + (q.tipo === "reforco" ? " (reforço)" : "");
+
+  document.getElementById("contexto").innerHTML = q.contexto;
+  document.getElementById("texto-questao").innerHTML = q.texto;
+
+  var ul = document.getElementById("alternativas");
+  ul.innerHTML = "";
+  for (var i = 0; i < q.alternativas.length; i++) {
+    (function(idx) {
+      var li = document.createElement("li");
+      var btn = document.createElement("button");
+      btn.className = "alternativa";
+      btn.innerHTML = "<strong>" + String.fromCharCode(97 + idx) + ")</strong> " + q.alternativas[idx];
+      btn.onclick = function() { responder(idx); };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    })(i);
+  }
+
+  document.getElementById("feedback").style.display = "none";
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("btn-proximo").style.display = "none";
+
+  document.getElementById("card-questao").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function responder(escolha) {
+  var q = estado.atual;
+  var botoes = document.querySelectorAll(".alternativa");
+  var acertou = escolha === q.correta;
+
+  for (var i = 0; i < botoes.length; i++) {
+    botoes[i].classList.add("disabled");
+    botoes[i].onclick = null;
+    if (i === q.correta) botoes[i].classList.add("correta");
+    if (i === escolha && !acertou) botoes[i].classList.add("incorreta");
+  }
+
+  var c = estado.conceitos[q.conceito];
+  c.tentativas++;
+  estado.totalRespondidas++;
+
+  var fb = document.getElementById("feedback");
+
+  if (acertou) {
+    c.acertos++;
+    estado.totalAcertos++;
+    if (c.status !== "errou") c.status = "acertou";
+    else c.status = "reforco";
+
+    fb.className = "feedback acerto";
+    fb.innerHTML = "<h4>&#10003; Correto!</h4><p>" + q.explicacao + "</p>";
+  } else {
+    if (q.tipo === "principal") {
+      c.status = "errou";
+      var reforco = null;
+      for (var r = 0; r < BANCO.length; r++) {
+        if (BANCO[r].conceito === q.conceito && BANCO[r].tipo === "reforco") {
+          reforco = BANCO[r];
+          break;
+        }
+      }
+      if (reforco) {
+        estado.fila.splice(estado.indice + 1, 0, reforco);
+      }
+    } else {
+      c.status = "errou";
+    }
+
+    fb.className = "feedback erro";
+    fb.innerHTML = "<h4>&#10007; Incorreto</h4><p>" + q.explicacao + "</p>" +
+      (q.tipo === "principal" ? '<p style="margin-top:8px;"><strong>&#8594; Você receberá um exercício de reforço sobre este conceito.</strong></p>' : "");
+  }
+
+  fb.style.display = "block";
+  document.getElementById("btn-proximo").style.display = "inline-block";
+  atualizarPainel();
+}
+
+function proximaQuestao() {
+  estado.indice++;
+  exibirQuestao();
+}
+
+function mostrarResultado() {
+  document.getElementById("card-questao").style.display = "none";
+  document.getElementById("painel-progresso").style.display = "none";
+  document.getElementById("tela-resultado").style.display = "block";
+
+  var pct = Math.round((estado.totalAcertos / estado.totalRespondidas) * 100);
+  var notaEl = document.getElementById("nota-final");
+  notaEl.textContent = pct + "%";
+  notaEl.className = "nota-final " + (pct >= 80 ? "boa" : pct >= 50 ? "media" : "baixa");
+
+  var msgEl = document.getElementById("msg-resultado");
+  if (pct >= 80) {
+    msgEl.textContent = "Excelente! Você demonstrou boa compreensão de como economistas pensam e usam seus modelos.";
+  } else if (pct >= 50) {
+    msgEl.textContent = "Bom progresso! Alguns conceitos do Capítulo 2 precisam de revisão.";
+  } else {
+    msgEl.textContent = "Há conceitos importantes para revisar. Releia as notas de aula e o Capítulo 2 do Mankiw.";
+  }
+
+  var detalhes = document.getElementById("resultado-detalhes");
+  detalhes.innerHTML = "<h3>Desempenho por Conceito</h3>";
+
+  var revisar = [];
+  for (var i = 1; i <= TOTAL_CONCEITOS; i++) {
+    var c = estado.conceitos[i];
+    var icone, statusClass, statusText;
+    if (c.status === "acertou") {
+      icone = "&#9989;"; statusClass = "status-dominado"; statusText = "Dominado";
+    } else if (c.status === "reforco") {
+      icone = "&#128260;"; statusClass = "status-reforcar"; statusText = "Reforçado";
+    } else if (c.status === "errou") {
+      icone = "&#10060;"; statusClass = "status-revisar"; statusText = "Revisar";
+      revisar.push(i);
+    } else {
+      icone = "&#11036;"; statusClass = "status-pendente"; statusText = "Pendente";
+    }
+
+    detalhes.innerHTML +=
+      '<div class="resultado-item">' +
+        '<span class="resultado-icone">' + icone + '</span>' +
+        '<span class="resultado-nome"><strong>C' + i + ':</strong> ' + NOMES_CONCEITOS[i] + '</span>' +
+        '<span class="resultado-status ' + statusClass + '">' + statusText + '</span>' +
+      '</div>';
+  }
+
+  if (revisar.length > 0) {
+    var dica = document.getElementById("dica-estudo");
+    dica.style.display = "block";
+    var html = "<h4>&#128214; Sugestões de estudo</h4><ul>";
+    var sugestoes = {
+      1: "Estude por que economistas usam modelos. Pense no modelo como um mapa: não precisa mostrar tudo, só o essencial para entender o fenômeno. Um modelo que incluísse tudo seria tão complexo quanto a própria realidade.",
+      2: "Desenhe a FPP de Carlos (alvenaria vs. acabamento). Identifique pontos eficientes (sobre a curva), ineficientes (dentro) e impossíveis (fora). Pense no que desloca a FPP para fora: mais educação, tecnologia ou capital.",
+      3: "Pratique o cálculo do custo de oportunidade usando a inclinação da FPP. Lembre-se: na FPP linear o custo é constante; na FPP côncava, o custo é crescente (cada unidade adicional custa mais).",
+      4: "Leia notícias econômicas e classifique cada afirmação como positiva ou normativa. Dica: se contém \"deveria\", \"precisa\" ou juízo de valor sobre o que é desejável, é normativa. Se descreve um fato verificável com dados, é positiva.",
+      5: "Faça uma lista de 10 temas econômicos e classifique cada um: decisões individuais e mercados específicos = Microeconomia; economia como um todo (PIB, inflação, desemprego nacional) = Macroeconomia."
+    };
+    for (var j = 0; j < revisar.length; j++) {
+      var p = revisar[j];
+      html += "<li><strong>Conceito " + p + " (" + NOMES_CONCEITOS[p] + "):</strong> " + sugestoes[p] + "</li>";
+    }
+    html += "</ul>";
+    dica.innerHTML = html;
+  }
+}
+</script>
+
+</body>
+</html>

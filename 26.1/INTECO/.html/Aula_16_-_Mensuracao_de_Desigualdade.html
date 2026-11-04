@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz - Aula 16: Mensuração de Desigualdade</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.7em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Mensura&ccedil;&atilde;o de Desigualdade</h1>
+<p>Quiz Adaptativo &mdash; Aula 16 &middot; Introdu&ccedil;&atilde;o &agrave; Economia &middot; UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreens&atilde;o de <strong>Curva de Lorenz, Gini, pobreza, IDH e o caso brasileiro</strong> (Mankiw, Cap.&nbsp;20).<br>Se errar uma quest&atilde;o principal, voc&ecirc; receber&aacute; uma <strong>explica&ccedil;&atilde;o</strong> e um <strong>exerc&iacute;cio de refor&ccedil;o</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Come&ccedil;ar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Pr&oacute;xima &rarr;</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Em distribuições assimétricas à direita (típicas da renda), a média é puxada para cima pela cauda dos mais ricos. No Brasil 2024: renda média per capita ≈ R$ 2.069; mediana ≈ R$ 1.412.",texto:"Por que, no Brasil, a renda <strong>mediana</strong> domiciliar per capita é bem menor que a <strong>média</strong>?",alternativas:["Erro de cálculo do IBGE","Porque há muitos brasileiros com renda muito alta puxando a média para cima","Porque a mediana é sempre menor que a média em qualquer distribuição","Porque a média não conta os mais pobres"],correta:1,explicacao:"Em uma distribuição <strong>assimétrica à direita</strong>, poucas pessoas com rendas muito altas puxam a média para cima, enquanto a mediana fica próxima do 'brasileiro típico'. Metade dos brasileiros vive com menos do que a média sugere."},
+{principio:1,tipo:"reforco",contexto:"Eficiência ≠ equidade. Eficiência é sobre o tamanho do bolo (PIB); equidade é sobre como ele é repartido.",texto:"Duas economias têm o mesmo PIB per capita, mas Ginis muito diferentes (0,28 vs. 0,55). É CORRETO dizer que:",alternativas:["Têm o mesmo bem-estar","Têm o mesmo tamanho de 'bolo', mas a repartição é muito diferente — bem-estares distintos","O Gini não importa se o PIB é igual","A com Gini 0,55 é necessariamente mais rica"],correta:1,explicacao:"PIB igual significa <strong>tamanho do bolo</strong> igual. Mas o Gini mostra que a <strong>repartição</strong> é distinta. Como a utilidade marginal da renda é decrescente, a economia mais igualitária tende a ter maior bem-estar agregado."},
+{principio:2,tipo:"principal",contexto:"A Curva de Lorenz ordena a população do mais pobre ao mais rico e plota a % acumulada da renda contra a % acumulada da população.",texto:"Se em um país os 50% mais pobres detêm 10% da renda total, a Curva de Lorenz desse país:",alternativas:["Está acima da diagonal de 45°","Coincide com a diagonal de 45°","Está abaixo da diagonal — quanto mais afastada, maior o Gini","É uma linha horizontal"],correta:2,explicacao:"A Lorenz fica <strong>abaixo</strong> da diagonal sempre que há desigualdade. A área entre as duas curvas é a medida visual da desigualdade. <strong>Gini = A / (A+B)</strong>, onde A é essa área e A+B é a área total abaixo da diagonal."},
+{principio:2,tipo:"reforco",contexto:"Gini = 0 significa igualdade perfeita; Gini = 1 significa que uma única pessoa concentra toda a renda.",texto:"O Gini do Brasil em 2024 foi de <strong>0,506</strong> (PNAD Contínua). Como interpretar?",alternativas:["O Brasil tem igualdade perfeita","Desigualdade muito alta — entre as maiores do mundo, embora menor da série iniciada em 2012","Uma só pessoa detém toda a renda","Gini não diz nada sobre desigualdade"],correta:1,explicacao:"<strong>0,506</strong> é o menor Gini da série histórica iniciada em 2012 (era 0,540), mas ainda é <strong>desigualdade muito alta</strong> em padrões internacionais (países nórdicos ≈ 0,28; Alemanha ≈ 0,31; Argentina/Uruguai ≈ 0,40)."},
+{principio:3,tipo:"principal",contexto:"O Banco Mundial publica linhas internacionais de pobreza em PPP 2017: US$ 2,15/dia (extrema) e US$ 6,85/dia (renda média alta). No Brasil em 2024, equivalem a ~R$ 218 e ~R$ 694 por mês.",texto:"Em 2024, segundo a Síntese de Indicadores Sociais do IBGE, a pobreza (linha de US$ 6,85/dia) no Brasil atingiu:",alternativas:["1% da população","23,1% (≈ 48,9 milhões de pessoas) — menor da série","60% da população","Foi eliminada"],correta:1,explicacao:"<strong>23,1%</strong> em 2024, menor da série, contra 27,3% em 2023 e pico de 36,8% no pós-pandemia (2021). A extrema pobreza caiu de 4,4% para 3,5% no mesmo período. 8,6 milhões saíram da pobreza em um ano."},
+{principio:3,tipo:"reforco",contexto:"Pobreza é absoluta (linha fixa); desigualdade é relativa (compara entre si). São conceitos distintos.",texto:"Qual a diferença essencial entre <strong>pobreza</strong> e <strong>desigualdade</strong>?",alternativas:["São sinônimos","Pobreza é absoluta (depende da linha); desigualdade é relativa (compara entre si)","Pobreza é só rural; desigualdade só urbana","Pobreza é medida em reais; desigualdade em dólares"],correta:1,explicacao:"<strong>Pobreza</strong>: depende de uma linha absoluta de subsistência. <strong>Desigualdade</strong>: depende de como as rendas se comparam entre si. Um país pode reduzir a pobreza (todos sobem) mantendo a desigualdade se os ricos sobem ainda mais rápido. No Brasil 2021–2024, ambas caíram juntas."},
+{principio:3,tipo:"principal",contexto:"No Brasil 2024, a pobreza é distribuída de forma muito desigual entre grupos: brancos ~15%, pretos ou pardos ~28%.",texto:"Sobre a pobreza no Brasil em 2024, é CORRETO afirmar:",alternativas:["Está distribuída igualmente entre todos os grupos","Pretos e pardos têm taxas cerca de 2× maiores que brancos; Nordeste/Norte concentram a maior parte","Só existe no Sul","Não há diferenças regionais"],correta:1,explicacao:"A pobreza no Brasil tem fortes recortes <strong>raciais</strong> (pretos ou pardos ~28% vs. brancos ~15%), <strong>geográficos</strong> (Nordeste/Norte com taxas maiores), <strong>etários</strong> (crianças e adolescentes mais vulneráveis) e <strong>de gênero</strong> (mulheres chefes de família mais expostas)."},
+{principio:4,tipo:"principal",contexto:"O IDH combina três dimensões em média geométrica: longevidade (expectativa de vida), educação (anos médios e esperados) e renda (RNB per capita PPP).",texto:"Por que o IDH usa <strong>três dimensões</strong> e não só o PIB per capita?",alternativas:["Porque o PIB não pode ser medido","Porque PIB per capita não capta saúde, educação ou distribuição — dimensões essenciais do bem-estar","Para complicar","Por exigência da ONU"],correta:1,explicacao:"PIB per capita é uma <strong>renda média</strong>; ignora saúde, educação e como a renda se distribui. O IDH (criado em 1990 pelo PNUD, inspirado em Amartya Sen e Mahbub ul Haq) combina <strong>renda + longevidade + educação</strong> em média geométrica — que penaliza desempenho ruim em qualquer dimensão."},
+{principio:4,tipo:"reforco",contexto:"O IDH do Brasil em 2023 foi 0,786, na categoria 'alto desenvolvimento humano' (84º entre 193 países). O IDHAD (ajustado pela desigualdade) cai para 0,594.",texto:"A diferença entre IDH (0,786) e IDHAD (0,594) do Brasil indica:",alternativas:["O Brasil é o país com IDH mais alto do mundo","Há alta desigualdade dentro das dimensões — ajustar pela desigualdade reduz o IDH em ~24%","O cálculo está errado","O Brasil ficou mais pobre"],correta:1,explicacao:"O <strong>IDHAD</strong> penaliza o IDH pela desigualdade em cada dimensão. Países nórdicos perdem ~5% ao ajustar; o Brasil perde ~24%. Em renda média, estamos próximos de países 'muito altos'; em distribuição, ficamos para trás. A perda revela o peso da desigualdade no desenvolvimento humano efetivo."},
+{principio:5,tipo:"principal",contexto:"Pesquisas domiciliares como a PNAD subestimam rendas muito altas. O World Inequality Database (WID) combina PNAD com dados fiscais e revela maior concentração no topo.",texto:"Segundo o WID, no Brasil o <strong>top 1%</strong> da população detém aproximadamente:",alternativas:["1% da renda nacional","10% da renda nacional","22–24% da renda nacional","50% da renda nacional"],correta:2,explicacao:"O <strong>top 1%</strong> concentra cerca de 22–24% da renda nacional; o <strong>top 10%</strong> fica com 58–60%; e os <strong>50% mais pobres</strong> repartem apenas ~10%. A razão top 10% / 50% mais pobres supera 30× — uma das maiores do mundo. Dados WID porque PNAD subnotifica rendas altas."},
+{principio:5,tipo:"reforco",contexto:"Bolsa Família é o principal programa de transferência condicional do Brasil. Em nov/2025: 18,65 milhões de famílias, benefício médio R$ 683.",texto:"Sobre o Bolsa Família e políticas redistributivas no Brasil, é CORRETO afirmar:",alternativas:["O programa é muito caro e ineficaz","Atende ~18,65 milhões de famílias; orçamento de ~R$ 165–170 bi/ano (~1,3% do PIB), com alto custo-efetividade na redução de pobreza/desigualdade","Já foi extinto","Só atende a região Sudeste"],correta:1,explicacao:"O Bolsa Família atende ~18,65 milhões de famílias com benefício médio de R$ 683 (piso R$ 600 implantado em 2023), totalizando um orçamento anual de <strong>~R$ 165–170 bilhões (~1,3% do PIB)</strong>. Exige frequência escolar (85%) e calendário de vacinação. Estudos do Ipea mostram alto custo-efetividade na redução da pobreza e da desigualdade — poucos centavos por real transferido se perdem."}
+];
+var NOMES={1:"Por que medir",2:"Lorenz e Gini",3:"Pobreza",4:"IDH",5:"Brasil e pol&iacute;ticas"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=5;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=5;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem as medidas de desigualdade e o caso brasileiro.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e o Capítulo 20 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=5;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise: eficiência ≠ equidade; utilidade marginal decrescente da renda; média vs mediana em distribuições assimétricas.",2:"Revise: Curva de Lorenz fica abaixo da diagonal quando há desigualdade; Gini = A/(A+B) ∈ [0,1]; Brasil 2024 = 0,506 (menor da série).",3:"Revise: pobreza absoluta (linhas BM US$ 2,15 e 6,85/dia); Brasil 2024 → 23,1% pobreza e 3,5% extrema; recortes por raça/região.",4:"Revise: IDH = média geométrica de longevidade + educação + renda; Brasil 2023 = 0,786 (84º); IDHAD cai para 0,594 (perda 24%).",5:"Revise: top 1% concentra ~23% da renda (WID); Bolsa Família 18,65 mi famílias, ~R$ 165-170 bi/ano (~1,3% PIB), alto custo-efetividade."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

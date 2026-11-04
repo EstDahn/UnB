@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Adaptativo — Aula 3: Interdependência e Ganhos do Comércio</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.72em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Interdependência e Ganhos do Comércio</h1>
+<p>Quiz Adaptativo — Aula 3 · Introdução à Economia · UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreensão de <strong>vantagem absoluta, vantagem comparativa, custo de oportunidade e ganhos do comércio</strong> (Mankiw, Cap. 3).<br>Se errar, você receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Marta faz 24 quentinhas/dia. Carlos faz 8 quentinhas/dia. Ambos têm 8 horas de trabalho.",texto:"Quem tem vantagem absoluta em quentinhas?",alternativas:["Carlos, porque se esforça mais","Marta, porque produz mais com o mesmo tempo","Ambos têm a mesma vantagem","Nenhum dos dois"],correta:1,explicacao:"<strong>Vantagem absoluta</strong> = produzir mais com os mesmos recursos. Marta faz 24 vs. 8 de Carlos no mesmo tempo."},
+{principio:1,tipo:"reforco",contexto:"O Brasil produz 10 toneladas de soja por trabalhador/mês. A Bolívia produz 3 toneladas.",texto:"O Brasil tem vantagem absoluta em soja. Isso significa que não vale a pena comerciar com a Bolívia?",alternativas:["Sim, o Brasil não precisa da Bolívia","Não — a Bolívia pode ter vantagem comparativa em outro produto","Sim, a Bolívia só prejudica o Brasil","Depende do preço do dólar"],correta:1,explicacao:"Vantagem absoluta não determina os ganhos do comércio. O que importa é a <strong>vantagem comparativa</strong> (menor custo de oportunidade). A Bolívia pode ter vantagem comparativa em gás natural, por exemplo."},
+{principio:2,tipo:"principal",contexto:"Marta pode fazer 24 quentinhas/dia OU 4 bolos/dia.",texto:"Qual é o custo de oportunidade de 1 bolo para Marta?",alternativas:["4 quentinhas","6 quentinhas","24 quentinhas","1/6 de quentinha"],correta:1,explicacao:"Se Marta faz 24 quentinhas OU 4 bolos, para cada bolo ela abre mão de 24÷4 = <strong>6 quentinhas</strong>."},
+{principio:2,tipo:"reforco",contexto:"Carlos pode fazer 8 quentinhas/dia OU 2 bolos/dia.",texto:"Qual é o custo de oportunidade de 1 bolo para Carlos? E quem tem menor custo?",alternativas:["8 quentinhas — Carlos tem custo maior","4 quentinhas — Carlos tem custo menor","2 quentinhas — ambos têm custo igual","6 quentinhas — mesmo custo que Marta"],correta:1,explicacao:"Carlos: 1 bolo = 8÷2 = <strong>4 quentinhas</strong>. Marta: 1 bolo = 6 quentinhas. Carlos tem <strong>menor</strong> custo de oportunidade em bolos."},
+{principio:3,tipo:"principal",contexto:"Marta: 1 bolo custa 6 quentinhas. Carlos: 1 bolo custa 4 quentinhas. Marta tem vantagem absoluta nos dois produtos.",texto:"Quem tem vantagem comparativa em bolos?",alternativas:["Marta (é melhor nos dois)","Carlos (menor custo de oportunidade: 4 < 6)","Nenhum (Marta é melhor em tudo)","Ambos (mesmo custo)"],correta:1,explicacao:"<strong>Vantagem comparativa</strong> = menor custo de oportunidade. Carlos abre mão de apenas 4 quentinhas por bolo (vs. 6 de Marta). Mesmo sendo pior nos dois, Carlos tem vantagem comparativa em bolos!"},
+{principio:3,tipo:"reforco",contexto:"O Brasil é mais produtivo que a Argentina em soja e em eletrônicos.",texto:"A Argentina pode ter vantagem comparativa em algum desses produtos?",alternativas:["Não — o Brasil é melhor nos dois","Sim — a Argentina pode ter menor custo de oportunidade em um deles","Só se a Argentina investir mais em tecnologia","Só com ajuda do governo"],correta:1,explicacao:"Mesmo que o Brasil tenha vantagem absoluta nos dois, a Argentina pode ter <strong>menor custo de oportunidade</strong> em um deles. É impossível ter vantagem comparativa em tudo — então a Argentina necessariamente tem vantagem comparativa em algo."},
+{principio:4,tipo:"principal",contexto:"Sem comércio: Marta tem 12 quentinhas + 2 bolos. Carlos tem 4 quentinhas + 1 bolo. Com especialização e troca: Marta fica com 13 quentinhas + 2 bolos. Carlos fica com 5 quentinhas + 1 bolo.",texto:"O que aconteceu com a troca?",alternativas:["Marta ganhou e Carlos perdeu","Carlos ganhou e Marta perdeu","Ambos ficaram em melhor situação","Ninguém mudou de situação"],correta:2,explicacao:"<strong>Ambos</strong> ficaram com mais quentinhas sem perder nenhum bolo! Marta: 12→13 (+1). Carlos: 4→5 (+1). A especialização + troca criou ganhos para os dois — o comércio <strong>não é soma zero</strong>."},
+{principio:4,tipo:"reforco",contexto:"O Brasil importa sapatos baratos da China. O primo de Carlos perdeu o emprego na fábrica de sapatos.",texto:"Se o comércio beneficia o país, por que alguns trabalhadores perdem?",alternativas:["Porque o comércio não funciona na prática","Porque o comércio beneficia o país todo, mas pode prejudicar setores específicos no curto prazo","Porque a China trapaceia","Porque o governo brasileiro é incompetente"],correta:1,explicacao:"O comércio beneficia o <strong>país como um todo</strong> (sapatos mais baratos para 200 milhões de pessoas), mas pode <strong>prejudicar setores específicos</strong> no curto prazo. Por isso o governo tem papel importante: seguro-desemprego, requalificação profissional, e políticas de transição."}
+];
+var NOMES={1:"Vant. Absoluta",2:"Custo de Oportunidade",3:"Vant. Comparativa",4:"Ganhos do Comércio"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=4;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=4;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem os ganhos do comércio.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e o Capítulo 3 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=4;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Releia a definição de vantagem absoluta: quem produz MAIS com os mesmos recursos. É o conceito mais intuitivo.",2:"Pratique o cálculo de custo de oportunidade: divida a produção máxima de um bem pela do outro. Ex: 24 quentinhas ÷ 4 bolos = 6.",3:"Vantagem comparativa = MENOR custo de oportunidade. Não confunda com vantagem absoluta! Quem é pior em tudo ainda pode ter vantagem comparativa em algo.",4:"Reveja o exemplo numérico de Marta e Carlos. Compare o antes e depois da troca. A chave: o preço da troca deve estar ENTRE os custos de oportunidade dos dois."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

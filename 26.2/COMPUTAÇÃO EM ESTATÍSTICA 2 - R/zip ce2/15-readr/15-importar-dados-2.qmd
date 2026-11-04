@@ -1,0 +1,161 @@
+---
+title: "Importação de Dados: Problemas de Análise Sintática"
+subtitle: "Diagnóstico e Soluções com `readr` (Foco em R4DS 7.3.2 - Exemplo Fornecido)"
+author: "IA Gemini instruída por dmp"
+date: "2025-10-09"
+date-format: "D [de] MMMM [de] YYYY"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+    scrollable: true
+    self-contained: false
+# format: 
+#   html: 
+#     embed-resources: true
+lang: pt
+execute:
+  echo: true
+  warning: true # Permitir warnings para mostrar os problemas de parsing
+  message: true # Permitir mensagens para mostrar output do readr
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE)
+library(tidyverse) # readr é parte do tidyverse
+```
+
+## Introdução: Problemas na Análise Sintática (Parsing)
+
+Ao importar dados de arquivos de texto (como CSVs), o `readr` tenta adivinhar o tipo de cada coluna (numérica, caractere, data, etc.) analisando as primeiras 1000 linhas. No entanto, essa adivinhação pode falhar, especialmente com dados "sujos" ou com formatos inesperados.
+
+Quando o `readr` encontra valores que não correspondem ao tipo de coluna esperado, ocorre um **problema de análise sintática** (parsing problem).
+
+Estes slides focam em como:
+
+1.  Identificar esses problemas.
+2.  Diagnosticar suas causas.
+3.  Corrigi-los para importar os dados corretamente.
+
+---
+
+## A Função `problems()`
+
+Quando você usa uma função `read_*` do `readr` (como `read_csv` ou `read_csv2`) e ocorrem problemas de parsing:
+
+* O `readr` geralmente importa os dados, convertendo os valores problemáticos para `NA` (Not Available).
+* Emite um `warning` indicando que houve falhas na análise.
+* Armazena informações detalhadas sobre esses problemas.
+
+Essas informações podem ser acessadas com a função `problems()`. Ela retorna um `tibble` onde cada linha descreve um problema, incluindo:
+
+* `row`: A linha no arquivo original onde o problema ocorreu.
+* `col`: A coluna (por nome ou posição) onde o problema ocorreu.
+* `expected`: O tipo de dado que o `readr` esperava encontrar.
+* `actual`: O valor real que o `readr` encontrou e não conseguiu converter.
+* `file`: O caminho para o arquivo.
+
+---
+
+## Exemplo (R4DS 7.3.2): Valores Ausentes e Tipos de Coluna
+
+A forma mais comum de falha na detecção de coluna é quando uma coluna contém valores inesperados, e você obtém uma coluna de caracteres em vez de um tipo mais específico. Uma das causas mais comuns para isso é um valor ausente registrado usando algo diferente do `NA` que o `readr` espera.
+
+Considere este exemplo simples de um arquivo CSV (representado como string) com 1 coluna:
+
+```{r exemplo_r4ds_simple_csv_setup}
+simple_csv <- "x\n10\n.\n20\n30"
+# Nota: O R4DS original no livro tem "  x  10  .  20  30"
+# mas para read_csv ler "x" como cabeçalho, precisamos de uma quebra de linha.
+# Se for "x,y\n10,.\n..." etc., o comportamento muda.
+# Vamos manter o espírito do exemplo de uma coluna com um cabeçalho 'x'.
+```
+
+Se o lermos sem argumentos adicionais, `x` se torna uma coluna de caracteres porque o `.` não é reconhecido como número nem como o `NA` padrão.
+
+```{r exemplo_r4ds_simple_csv_read1, message=TRUE, warning=TRUE}
+read_csv(simple_csv)
+```
+
+Nesse pequeno exemplo, você pode ver facilmente o valor ausente `.` que causou a coluna `x` ser interpretada como caractere. Mas o que acontece se você tiver milhares de linhas com apenas alguns valores ausentes representados por `.`s espalhados entre eles?
+
+---
+
+## Diagnosticando com `col_types` e `problems()`
+
+Uma abordagem é dizer ao `readr` que `x` é uma coluna numérica e, em seguida, ver onde ele falha. Você pode fazer isso com o argumento `col_types`, que aceita uma lista nomeada onde os nomes correspondem aos nomes das colunas no arquivo CSV:
+
+```{r exemplo_r4ds_simple_csv_col_types, message=TRUE, warning=TRUE}
+df <- read_csv(
+  simple_csv, 
+  col_types = list(x = col_double())
+)
+```
+
+Agora `read_csv()` relata que houve um problema e nos diz que podemos descobrir mais com `problems()`:
+
+```{r exemplo_r4ds_simple_csv_problems}
+problems(df)
+```
+
+Isso nos diz que houve um problema na linha 3, coluna 1 (`x`), onde o `readr` esperava um `double` (número real), mas obteve um `.`. Isso sugere que este conjunto de dados usa `.` para valores ausentes.
+
+---
+
+## Corrigindo com o Argumento `na`
+
+Então, definimos `na = "."`. A adivinhação automática (ou a especificação de tipo) agora tem sucesso em converter para numérico, e o `.` é corretamente interpretado como `NA`, nos dando a coluna numérica que queremos:
+
+```{r exemplo_r4ds_simple_csv_na_fix}
+read_csv(simple_csv, na = ".")
+```
+
+E se especificarmos o tipo E o `na`:
+```{r exemplo_r4ds_simple_csv_na_col_types_fix}
+read_csv(
+  simple_csv, 
+  na = ".",
+  col_types = list(x = col_double())
+)
+problems(read_csv(
+  simple_csv, 
+  na = ".",
+  col_types = list(x = col_double())
+)) # Nenhum problema reportado agora
+```
+
+---
+
+## Estratégias Comuns para Corrigir Problemas de Parsing (R4DS 7.3)
+
+Mesmo que não tenhamos visto todos os exemplos de R4DS 7.3 aqui, as estratégias gerais para corrigir problemas são importantes:
+
+1.  **Inspecionar com `problems()`:** Sempre o primeiro passo para entender a natureza e localização dos erros.
+
+2.  **Ajustar `col_types`:** A solução mais robusta é especificar explicitamente o tipo de cada coluna usando o argumento `col_types`.
+    * Se uma coluna numérica tem alguns valores não numéricos que deveriam ser `NA`, ler como `col_character()` primeiro e depois converter pode ser uma opção.
+    * Se uma coluna é consistentemente de um tipo, mas `readr` adivinha errado, force o tipo correto.
+
+3.  **Aumentar `guess_max`:** `readr` adivinha os tipos de coluna com base nas primeiras 1000 linhas (por padrão). Se as primeiras linhas não são representativas, você pode aumentar este valor:
+    `read_csv(arquivo, guess_max = 5000)`
+    Isso pode ser mais lento para arquivos grandes.
+
+4.  **Ler Tudo como Caractere:** Como último recurso, ou para inspeção inicial de arquivos muito problemáticos, você pode ler todas as colunas como caracteres e depois fazer a conversão manual em R:
+    `read_csv(arquivo, col_types = cols(.default = col_character()))`
+    Isso evita erros de parsing, mas adia o trabalho de conversão de tipos para você.
+
+---
+
+## Conclusão
+
+A importação de dados raramente é perfeita na primeira tentativa com dados do mundo real.
+
+1.  **Sempre inspecione** os dados importados (`glimpse()`, `head()`, `summary()`).
+2.  Preste atenção aos **warnings** do `readr`.
+3.  Use `problems()` para obter **detalhes específicos** sobre falhas de parsing.
+4.  A estratégia mais robusta é frequentemente **especificar `col_types` explicitamente** e/ou usar o argumento `locale` (para encoding, decimais, etc.) e `na` (para valores ausentes) adequadamente.
+5.  Para problemas mais complexos, ler como caractere e depois usar `parse_*` functions (`parse_double`, `parse_integer`, `parse_date`, `parse_number`) do `readr` ou funções do `stringr` para limpeza pode ser necessário.
+
+Entender como diagnosticar e corrigir esses problemas é uma habilidade essencial para trabalhar com dados.
+

@@ -1,0 +1,408 @@
+---
+title: "Advanced R, 2ª Edição: Resumo do Capítulo 9"
+subtitle: "Functionals"
+author: "Resumido por Gemini (baseado em Hadley Wickham)"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-fold: false
+execute:
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Um **functional** é uma função que recebe outra função como entrada e retorna um vetor como saída. Aqui está um functional simples: ele chama a função fornecida como entrada com 1000 números uniformes aleatórios.
+
+```{r}
+randomise <- function(f) f(runif(1e3))
+randomise(mean)
+randomise(mean)
+randomise(sum)
+```
+
+Functionals são uma alternativa poderosa aos laços `for`. Cada functional é adaptado para uma tarefa específica; portanto, quando você reconhece o functional, sabe imediatamente por que ele está sendo usado. Se você é um usuário experiente de laços `for`, mudar para functionals é tipicamente um exercício de reconhecimento de padrões.
+
+Este capítulo foca nos functionals fornecidos pelo pacote `purrr`.
+
+```{r setup}
+library(purrr)
+```
+
+## Meu primeiro functional: `map()`
+
+O functional mais fundamental é o `purrr::map()`. Ele recebe um vetor e uma função, chama a função uma vez para cada elemento do vetor e retorna os resultados em uma lista. Em outras palavras, `map(1:3, f)` é equivalente a `list(f(1), f(2), f(3))`.
+
+```{r}
+triple <- function(x) x * 3
+map(1:3, triple)
+```
+
+Graficamente:
+
+```{r, echo = FALSE, out.width = NULL}
+# Supondo que a imagem esteja em img/functionals/map.png
+# knitr::include_graphics("img/functionals/map.png")
+```
+![Diagrama do map](https://adv-r.hadley.nz/diagrams/functionals/map.png)
+
+A implementação do `map()` é bastante simples. Alocamos uma lista do mesmo comprimento da entrada e, em seguida, preenchemos a lista com um laço `for`.
+
+```{r}
+simple_map <- function(x, f, ...) {
+  out <- vector("list", length(x))
+  for (i in seq_along(x)) {
+    out[[i]] <- f(x[[i]], ...)
+  }
+  out
+}
+```
+
+### Produzindo vetores atômicos
+
+`map()` retorna uma lista, o que a torna a mais geral da família `map`. No entanto, existem quatro variantes mais específicas para quando um vetor atômico é suficiente: `map_lgl()`, `map_int()`, `map_dbl()` e `map_chr()`. Cada uma retorna um vetor atômico do tipo especificado.
+
+```{r}
+# map_chr() sempre retorna um vetor de caracteres
+map_chr(mtcars, typeof)
+
+# map_lgl() sempre retorna um vetor lógico
+map_lgl(mtcars, is.double)
+
+# map_int() sempre retorna um vetor de inteiros
+n_unique <- function(x) length(unique(x))
+map_int(mtcars, n_unique)
+
+# map_dbl() sempre retorna um vetor double (numérico)
+map_dbl(mtcars, mean)
+```
+Graficamente, podemos ver um data frame como uma lista de vetores:
+
+```{r, echo = FALSE, out.width = NULL}
+# Supondo que a imagem esteja em img/functionals/map-list.png
+# knitr::include_graphics("img/functionals/map-list.png")
+```
+![Data frame como uma lista de vetores](https://adv-r.hadley.nz/diagrams/functionals/map-list.png)
+
+Todas as funções `map` sempre retornam um vetor de saída do mesmo comprimento que a entrada, o que implica que cada chamada a `.f` deve retornar um único valor. Se não o fizer, você receberá um erro:
+
+```{r, error = TRUE}
+pair <- function(x) c(x, x)
+map_dbl(1:2, pair)
+```
+
+Se `.f` retornar o tipo errado de resultado, você também receberá um erro. Nesses casos, é útil voltar a usar `map()` para poder inspecionar a saída problemática.
+
+```{r}
+map(1:2, pair)
+map(1:2, as.character)
+```
+
+### Funções anônimas e atalhos
+
+Em vez de usar `map()` com uma função existente, você pode criar uma função anônima inline.
+
+```{r}
+map_dbl(mtcars, function(x) length(unique(x)))
+```
+
+Como a sintaxe é verbosa, o `purrr` suporta um atalho com `~` (twiddle):
+
+```{r}
+map_dbl(mtcars, ~ length(unique(.x)))
+```
+
+O `purrr` também tem atalhos para extrair elementos de um vetor, usando `purrr::pluck()`. Você pode usar um vetor de caracteres para selecionar por nome, um vetor de inteiros para selecionar por posição, ou uma lista para selecionar por ambos.
+
+```{r, error = TRUE}
+x <- list(
+  list(-1, x = 1, y = c(2), z = "a"),
+  list(-2, x = 4, y = c(5, 6), z = "b"),
+  list(-3, x = 8, y = c(9, 10, 11))
+)
+
+# Selecionar por nome
+map_dbl(x, "x")
+
+# Ou por posição
+map_dbl(x, 1)
+
+# Ou por ambos
+map_dbl(x, list("y", 1))
+
+# Você receberá um erro se um componente não existir:
+# map_chr(x, "z") # Descomentado para evitar erro na renderização
+
+# A menos que forneça um valor .default
+map_chr(x, "z", .default = NA)
+```
+
+### Passando argumentos com `...`
+
+Argumentos adicionais para `.f` podem ser passados diretamente para a função `map`.
+
+```{r}
+x <- list(1:5, c(1:10, NA))
+map_dbl(x, mean, na.rm = TRUE)
+```
+Graficamente:
+```{r, echo = FALSE, out.width = NULL}
+# Supondo que a imagem esteja em img/functionals/map-arg.png
+# knitr::include_graphics("img/functionals/map-arg.png")
+```
+![Passando argumentos extras para o map](https://adv-r.hadley.nz/diagrams/functionals/map-arg.png)
+
+É importante notar que `map()` é vetorizado apenas sobre seu primeiro argumento. Se um argumento após `.f` for um vetor, ele será passado como está.
+
+```{r, echo = FALSE, out.width = NULL}
+# Supondo que a imagem esteja em img/functionals/map-arg-recycle.png
+# knitr::include_graphics("img/functionals/map-arg-recycle.png")
+```
+![Argumentos extras não são vetorizados](https://adv-r.hadley.nz/diagrams/functionals/map-arg-recycle.png)
+
+
+### Variando outro argumento
+
+E se o primeiro argumento da sua função for constante, e você quiser variar outro?
+```{r, echo = FALSE, out.width = NULL}
+# Supondo que a imagem esteja em img/functionals/map-arg-flipped.png
+# knitr::include_graphics("img/functionals/map-arg-flipped.png")
+```
+![Variando um argumento que não é o primeiro](https://adv-r.hadley.nz/diagrams/functionals/map-arg-flipped.png)
+
+A técnica mais simples é usar uma função anônima para reorganizar a ordem dos argumentos.
+
+```{r}
+trims <- c(0, 0.1, 0.2, 0.5)
+x <- rcauchy(1000)
+
+map_dbl(trims, ~ mean(x, trim = .x))
+```
+
+## Estilo Purrr
+
+Vamos ver como usar múltiplas funções `purrr` para resolver um problema: ajustar um modelo para cada subgrupo e extrair um coeficiente. Primeiro, dividimos o dataset `mtcars` por cilindros:
+
+```{r}
+by_cyl <- split(mtcars, mtcars$cyl)
+```
+
+Agora, ajustamos um modelo linear, extraímos os coeficientes e pegamos o segundo coeficiente (a inclinação).
+
+```{r}
+by_cyl |>
+  map(~ lm(mpg ~ wt, data = .x)) |>
+  map(coef) |>
+  map_dbl(2)
+```
+
+Este código é fácil de ler porque cada linha encapsula um único passo.
+
+## Variantes do Map
+
+Existem muitas variantes do `map()`, organizadas de forma ortogonal.
+
+|                       | Lista     | Atômico           | Mesmo tipo   | Nada      |
+|-----------------------|-----------|-------------------|--------------|-----------|
+| Um argumento          | `map()`   | `map_lgl()`, ...  | `modify()`   | `walk()`  |
+| Dois argumentos       | `map2()`  | `map2_lgl()`, ... | `modify2()`  | `walk2()` |
+| Um argumento + índice | `imap()`  | `imap_lgl()`, ... | `imodify()`  | `iwalk()` |
+| N argumentos          | `pmap()`  | `pmap_lgl()`, ... | ---          | `pwalk()` |
+
+### Mesmo tipo de saída que a entrada: `modify()`
+
+Se você quer que a saída tenha o mesmo tipo que a entrada (por exemplo, um data frame), use `modify()`.
+
+```{r}
+df <- data.frame(
+  x = 1:3,
+  y = 6:4
+)
+
+# map() retorna uma lista
+map(df, ~ .x * 2)
+
+# modify() retorna um data frame
+modify(df, ~ .x * 2)
+```
+
+### Dois inputs: `map2()` e amigos
+
+`map2()` é vetorizado sobre dois argumentos, `.x` e `.y`.
+
+```{r}
+xs <- map(1:8, ~ runif(10))
+xs[[1]][[1]] <- NA
+ws <- map(1:8, ~ rpois(10, 5) + 1)
+
+# map2() varia .x e .y em cada chamada
+map2_dbl(xs, ws, weighted.mean, na.rm = TRUE)
+```
+Graficamente:
+```{r, echo = FALSE, out.width = NULL}
+# Supondo que a imagem esteja em img/functionals/map2-arg.png
+# knitr::include_graphics("img/functionals/map2-arg.png")
+```
+![Diagrama do map2 com argumentos](https://adv-r.hadley.nz/diagrams/functionals/map2-arg.png)
+
+### Sem saídas: `walk()` e amigos
+
+Quando uma função é chamada por seus efeitos colaterais (ex: `cat()`, `write.csv()`), use `walk()`. Ele ignora os valores de retorno e retorna invisivelmente `.x`.
+
+```{r}
+welcome <- function(x) {
+  cat("Welcome ", x, "!\n", sep = "")
+}
+names <- c("Hadley", "Jenny")
+
+walk(names, welcome)
+```
+Graficamente:
+```{r, echo = FALSE, out.width = NULL}
+# Supondo que a imagem esteja em img/functionals/walk.png
+# knitr::include_graphics("img/functionals/walk.png")
+```
+![Diagrama do walk](https://adv-r.hadley.nz/diagrams/functionals/walk.png)
+
+`walk2()` é muito útil, por exemplo, para salvar múltiplos objetos em múltiplos caminhos.
+
+```{r}
+temp <- tempfile()
+dir.create(temp)
+
+cyls <- split(mtcars, mtcars$cyl)
+paths <- file.path(temp, paste0("cyl-", names(cyls), ".csv"))
+walk2(cyls, paths, write.csv)
+
+dir(temp)
+```
+
+### Iterando sobre valores e índices: `imap()`
+
+`imap()` itera sobre os valores e os índices (ou nomes) de um vetor em paralelo.
+
+```{r}
+imap_chr(iris, ~ paste0("The first value of ", .y, " is ", .x[[1]]))
+```
+
+### Qualquer número de inputs: `pmap()` e amigos
+
+`pmap()` recebe uma única lista de argumentos e itera sobre eles em paralelo. `map2(x, y, f)` é o mesmo que `pmap(list(x, y), f)`.
+
+```{r}
+# pmap é útil com um data frame de parâmetros
+params <- tibble::tribble(
+  ~n, ~min, ~max,
+  1L, 0, 1,
+  2L, 10, 100,
+  3L, 100, 1000
+)
+
+pmap(params, runif)
+```
+
+## Família Reduce
+
+### Básico: `reduce()`
+
+`reduce()` combina os elementos de um vetor em um único valor, aplicando repetidamente uma função binária. `reduce(1:4, f)` é equivalente a `f(f(f(1, 2), 3), 4)`.
+
+```{r, echo = FALSE, out.width = NULL}
+# Supondo que a imagem esteja em img/functionals/reduce.png
+# knitr::include_graphics("img/functionals/reduce.png")
+```
+![Diagrama do reduce](https://adv-r.hadley.nz/diagrams/functionals/reduce.png)
+
+Por exemplo, para encontrar a interseção de múltiplos vetores:
+```{r}
+l <- map(1:4, ~ sample(1:10, 15, replace = TRUE))
+reduce(l, intersect)
+```
+
+### `accumulate()`
+
+`accumulate()` é semelhante a `reduce()`, mas retorna também os resultados intermediários.
+
+```{r}
+accumulate(l, intersect)
+```
+
+### Tipos de saída e `.init`
+
+Para vetores de comprimento 0 ou 1, o comportamento de `reduce()` pode ser controlado com o argumento `.init`. É uma boa prática sempre fornecer `.init` ao usar `reduce()` dentro de uma função.
+
+```{r, error = TRUE}
+# Erro com vetor de comprimento 0
+# reduce(integer(), `+`)
+
+# Com .init, funciona e retorna a identidade da operação (0 para soma)
+reduce(integer(), `+`, .init = 0)
+```
+
+## Functionals de Predicado
+
+Um **predicado** é uma função que retorna um único `TRUE` ou `FALSE`.
+
+### Básico
+
+* `some(.x, .p)`: `TRUE` se *algum* elemento corresponder.
+* `every(.x, .p)`: `TRUE` se *todos* os elementos corresponderem.
+* `detect(.x, .p)`: retorna o *valor* da primeira correspondência.
+* `detect_index(.x, .p)`: retorna a *localização* da primeira correspondência.
+* `keep(.x, .p)`: *mantém* todos os elementos correspondentes.
+* `discard(.x, .p)`: *descarta* todos os elementos correspondentes.
+
+```{r}
+df <- data.frame(x = 1:3, y = c("a", "b", "c"))
+detect(df, is.factor)
+str(keep(df, is.factor))
+```
+
+### Variantes de Map
+
+`map_if()` e `modify_if()` aplicam uma transformação apenas nos elementos onde o predicado é `TRUE`.
+
+```{r}
+df <- data.frame(
+  num1 = c(0, 10, 20),
+  num2 = c(5, 6, 7),
+  chr1 = c("a", "b", "c"),
+  stringsAsFactors = FALSE
+)
+
+str(modify_if(df, is.numeric, mean))
+```
+
+## Functionals do R Base
+
+### Matrizes e arrays: `apply()`
+
+`apply()` é especializado para matrizes e arrays, sumarizando sobre as margens (1=linhas, 2=colunas).
+
+```{r}
+a2d <- matrix(1:20, nrow = 5)
+apply(a2d, 1, mean) # média das linhas
+apply(a2d, 2, mean) # média das colunas
+```
+
+### Preocupações Matemáticas
+
+O R Base fornece functionals matemáticos como:
+
+* `integrate()`: encontra a área sob a curva.
+* `uniroot()`: encontra o zero da função.
+* `optimise()`: encontra o mínimo ou máximo da função.
+
+```{r}
+integrate(sin, 0, pi)
+str(uniroot(sin, pi * c(1 / 2, 3 / 2)))
+str(optimise(sin, c(0, 2 * pi)))
+```
+

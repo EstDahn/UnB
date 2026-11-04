@@ -1,0 +1,422 @@
+---
+title: "PPCA0026: Métodos Computacionais Intensivos para Mineração de Dados"
+subtitle: "Semana 2, Parte 2: Visualização Multivariada & Conceitos de Exploração Interativa"
+author: "Prof. Donald M. Pianto"
+institute: "Universidade de Brasília (UnB) - Programa de Pós-Graduação em Computação Aplicada (PPCA)"
+date: "2025-06-06" # Assuming the week after 2025-05-30
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    embed-resources: true
+#   revealjs:
+#     theme: solarized
+#     slide-number: true
+#     chalkboard: false
+#     # logo: "path/to/your/unb_logo.png" # Optional
+#     footer: "PPCA0026 - UnB"
+#     scrollable: true
+#     reference-location: "section"
+#     embed-resources: false
+# #    incremental: true # Makes bullets appear one by one
+---
+
+```{r setup,  eval=TRUE, echo=FALSE}
+library(ggplot2)
+library(GGally)
+library(reshape2)
+library(dados)
+library(dplyr)
+```
+
+## Objetivos da Aula
+
+* Explorar técnicas para visualização de dados multivariados.
+* Discutir estratégias para lidar com overplotting em grandes conjuntos de dados.
+* Introduzir os conceitos fundamentais de visualização interativa.
+* Apresentar ferramentas em R para criar visualizações interativas.
+
+---
+
+## Visualizando Dados Multivariados {background-color="#003366" color="white"}
+
+Quando temos mais de duas ou três variáveis, como podemos visualizá-las efetivamente?
+
+---
+
+### Análise de Componentes Principais (PCA) para Visualização
+
+* **Conceito:** PCA é uma técnica de redução de dimensionalidade que transforma os dados em um novo conjunto de variáveis (componentes principais) não correlacionadas, ordenadas pela variância que explicam.
+* **Utilidade para Visualização:**
+    * Plotar os dois ou três primeiros componentes principais (PC1 vs PC2, ou PC1 vs PC2 vs PC3) permite visualizar a estrutura de dados de alta dimensão em um espaço de baixa dimensão.
+    * Ajuda a identificar clusters, outliers e as direções de maior variação nos dados.
+* **Em R (com `stats::prcomp` e `ggplot2`):**
+
+```{r pca_viz_example, eval=FALSE, echo=TRUE}
+#| fig-cap: "Visualização dos dois primeiros Componentes Principais do dataset iris."
+#| fig-width: 8
+#| fig-height: 6
+
+library(ggplot2)
+data(iris)
+
+# Realiza PCA nas colunas numéricas (1 a 4)
+pca_result <- prcomp(iris[,1:4], center = TRUE, scale. = TRUE)
+
+# Cria um data frame com os componentes principais e a variável Species
+pca_data <- data.frame(pca_result$x[,1:2], Species = iris$Species) # Usando PC1 e PC2
+
+# Plota PC1 vs PC2
+ggplot(pca_data, aes(x = PC1, y = PC2, color = Species, shape = Species)) +
+  geom_point(size = 3, alpha = 0.7) +
+  labs(title = "Visualização PCA do Dataset Iris (PC1 vs PC2)",
+       x = paste0("Componente Principal 1 (", round(summary(pca_result)$importance[2,1]*100, 1), "%)"),
+       y = paste0("Componente Principal 2 (", round(summary(pca_result)$importance[2,2]*100, 1), "%)")) +
+  theme_minimal() +
+  stat_ellipse(aes(group = Species), type = "norm", level = 0.95, linetype = 2, alpha=0.5) # Adiciona elipses de confiança
+```
+
+---
+
+#### PCA (continuação)
+
+```{r pca_viz_example_eval, eval=TRUE, echo=FALSE}
+#| fig-cap: "Visualização dos dois primeiros Componentes Principais do dataset iris."
+#| fig-width: 8
+#| fig-height: 6
+
+library(ggplot2)
+data(iris)
+
+# Realiza PCA nas colunas numéricas (1 a 4)
+pca_result <- prcomp(iris[,1:4], center = TRUE, scale. = TRUE)
+
+# Cria um data frame com os componentes principais e a variável Species
+pca_data <- data.frame(pca_result$x[,1:2], Species = iris$Species) # Usando PC1 e PC2
+
+# Plota PC1 vs PC2
+ggplot(pca_data, aes(x = PC1, y = PC2, color = Species, shape = Species)) +
+  geom_point(size = 3, alpha = 0.7) +
+  labs(title = "Visualização PCA do Dataset Iris (PC1 vs PC2)",
+       x = paste0("Componente Principal 1 (", round(summary(pca_result)$importance[2,1]*100, 1), "%)"),
+       y = paste0("Componente Principal 2 (", round(summary(pca_result)$importance[2,2]*100, 1), "%)")) +
+  theme_minimal() +
+  stat_ellipse(aes(group = Species), type = "norm", level = 0.95, linetype = 2, alpha=0.5) # Adiciona elipses de confiança
+```
+
+---
+
+#### Outras técnicas de redução (extração)
+
+* **Outras Técnicas de Extração de Features:** PCA é apenas uma de várias técnicas. Métodos como Independent Component Analysis (ICA), Linear Discriminant Analysis (LDA), t-SNE (para visualização), e Autoencoders também podem ser usados para extrair features ou reduzir dimensionalidade. Para uma visão geral, consulte o material `Feature Extraction Techniques.pdf`.
+
+---
+
+
+### Matrizes de Gráficos de Dispersão (SPLOMs)
+
+* **Conceito:** Uma matriz de gráficos de dispersão, onde cada célula (i, j) mostra o scatterplot da variável `i` vs. variável `j`. A diagonal pode mostrar histogramas ou estimativas de densidade de cada variável.
+* **Utilidade:** Permite visualizar todas as relações par a par em um único display. Útil para identificar correlações, clusters e outliers em múltiplas dimensões.
+* **Referência Teórica:** `classicas-14.pdf`
+* **Em R (com `GGally`):**
+
+```{r splom_example, eval=FALSE, echo=TRUE}
+#| fig-cap: "Exemplo de Matriz de Gráficos de Dispersão (SPLOM) com o dataset iris."
+#| fig-width: 9
+#| fig-height: 7
+
+library(GGally)
+data(iris)
+ggpairs(iris, columns = 1:4, aes(color = Species, alpha = 0.6)) +
+  labs(title = "SPLOM do Dataset Iris")
+```
+
+
+---
+
+#### Matrizes de Gráficos de Dispersão (SPLOMs) (cont)
+
+```{r splom_example_eval, eval=TRUE, echo=FALSE}
+#| fig-cap: "Exemplo de Matriz de Gráficos de Dispersão (SPLOM) com o dataset iris."
+#| fig-width: 9
+#| fig-height: 7
+
+library(GGally)
+data(iris)
+ggpairs(iris, columns = 1:4, aes(color = Species, alpha = 0.6)) +
+  labs(title = "SPLOM do Dataset Iris")
+```
+
+---
+
+### Coordenadas Paralelas
+
+* **Conceito:** Cada variável é representada por um eixo vertical. Uma observação é uma linha (polilinha) que cruza cada eixo no valor correspondente da variável.
+* **Utilidade:** Boa para identificar clusters, relações (especialmente inversas entre eixos adjacentes) e padrões em dados de alta dimensionalidade. A ordem dos eixos é importante.
+* **Referência Teórica:** `classicas-25.pdf` a `classicas-34.pdf` (incluindo variantes)
+* **Em R (com `GGally`):**
+
+```{r parcoord_example, eval=FALSE, echo=TRUE}
+#| fig-cap: "Exemplo de Coordenadas Paralelas com o dataset iris."
+#| fig-width: 8
+#| fig-height: 5
+
+library(GGally)
+data(iris)
+ggparcoord(iris,
+           columns = 1:4,
+           groupColumn = "Species",
+           scale = "uniminmax", # Escala para [0,1] por variável
+           alphaLines = 0.5
+           ) +
+  labs(title = "Coordenadas Paralelas do Dataset Iris") +
+  theme_minimal()
+```
+
+---
+
+#### Coordenadas Paralelas (continuação)
+
+```{r parcoord_example_eval, eval=TRUE, echo=FALSE}
+#| fig-cap: "Exemplo de Coordenadas Paralelas com o dataset iris."
+#| fig-width: 8
+#| fig-height: 5
+
+library(GGally)
+data(iris)
+ggparcoord(iris,
+           columns = 1:4,
+           groupColumn = "Species",
+           scale = "uniminmax", # Escala para [0,1] por variável
+           alphaLines = 0.5
+           ) +
+  labs(title = "Coordenadas Paralelas do Dataset Iris") +
+  theme_minimal()
+```
+
+
+
+---
+
+### Mapas de Calor (Heatmaps)
+
+* **Conceito:** Representação gráfica de uma matriz de dados onde os valores são representados por cores.
+* **Utilidade:** Excelente para visualizar a magnitude de fenômenos em duas dimensões (e.g., matrizes de correlação, expressão gênica, dados tabulares). A reordenação de linhas/colunas (clustering) pode revelar padrões.
+* **Referência Teórica:** `classicas-43.pdf`
+* **Em R (com `ggplot2`):**
+
+```{r heatmap_example, eval=FALSE, echo=TRUE}
+#| fig-cap: "Exemplo de Mapa de Calor da matriz de correlação do dataset mtcars."
+#| fig-width: 7
+#| fig-height: 6
+
+library(ggplot2)
+library(reshape2) # Para a função melt
+data(mtcars)
+
+cor_matrix <- round(cor(mtcars[, c("mpg", "cyl", "disp", "hp", "wt", "qsec")]), 2)
+melted_cormat <- melt(cor_matrix)
+
+ggplot(data = melted_cormat, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") + # Adiciona bordas brancas
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white",
+                       midpoint = 0, limit = c(-1,1), space = "Lab",
+                       name="Correlação") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  coord_fixed() + # Garante que as células sejam quadradas
+  geom_text(aes(label = value), color = "black", size = 3) + # Adiciona valores
+  labs(title = "Mapa de Calor das Correlações (mtcars)")
+```
+
+---
+
+#### Mapas de Calor (Continuação)
+
+```{r heatmap_example_eval, eval=TRUE, echo=FALSE}
+#| fig-cap: "Exemplo de Mapa de Calor da matriz de correlação do dataset mtcars."
+#| fig-width: 7
+#| fig-height: 6
+
+library(ggplot2)
+library(reshape2) # Para a função melt
+data(mtcars)
+
+cor_matrix <- round(cor(mtcars[, c("mpg", "cyl", "disp", "hp", "wt", "qsec")]), 2)
+melted_cormat <- melt(cor_matrix)
+
+ggplot(data = melted_cormat, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") + # Adiciona bordas brancas
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white",
+                       midpoint = 0, limit = c(-1,1), space = "Lab",
+                       name="Correlação") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  coord_fixed() + # Garante que as células sejam quadradas
+  geom_text(aes(label = value), color = "black", size = 3) + # Adiciona valores
+  labs(title = "Mapa de Calor das Correlações (mtcars)")
+```
+
+
+---
+
+## Lidando com Overplotting {background-color="#4a5f70" color="white"}
+
+Em grandes conjuntos de dados, muitos pontos podem se sobrepor, obscurecendo padrões.
+
+---
+
+### Estratégias para Overplotting
+
+* **Transparência (Alpha Blending):**
+    * Pontos semi-transparentes revelam regiões de alta densidade.
+    * Em `ggplot2`: `geom_point(alpha = 0.1)`
+* **Jittering:**
+    * Adiciona uma pequena quantidade de ruído aleatório à posição dos pontos.
+    * Útil para dados categóricos ou discretos onde pontos se sobrepõem perfeitamente.
+    * Em `ggplot2`: `geom_jitter(width = 0.1, height = 0.1)`
+* **Binning / Agregação:**
+    * **2D Histogramas / Heatmaps de Densidade:** Agrupa pontos em bins 2D e mapeia a contagem/densidade para cor.
+    * Em `ggplot2`: `geom_bin2d()`, `geom_hex()`, `stat_density_2d(aes(fill = ..level..), geom = "polygon")`
+* **Amostragem (Sampling):**
+    * Plotar um subconjunto aleatório dos dados se o dataset for muito grande.
+* **Referências:** `02-Robustez-e-Graficos.pdf` (p.27 para binning), `classicas.pdf` (menciona agregação em contextos como coordenadas paralelas hierárquicas, p.30).
+
+---
+
+#### Exemplo de Overplotting
+```{r overplotting_example, echo=TRUE, eval=TRUE}
+menores_diamantes <- diamante |> 
+  filter(quilate < 3)
+
+ggplot(menores_diamantes, aes(x = quilate, y = preco)) +
+  geom_point()
+```
+
+---
+
+#### Resolvendo Overplotting
+```{r overplotting_solution, echo=TRUE, eval=TRUE}
+ggplot(menores_diamantes, aes(x = quilate, y = preco)) + 
+  geom_point(alpha = 1 / 100)
+```
+
+
+---
+
+## Introdução à Visualização Interativa {background-color="#00796b" color="white"}
+
+Permitir que o usuário explore os dados dinamicamente.
+
+---
+
+### O Pipeline de Análise Visual
+
+* A interação do usuário é um loop de feedback em todas as etapas: Transformação de Dados $\rightarrow$ Mapeamentos Visuais $\rightarrow$ Transformações de Visualização.
+* **Referência:** `InteractionVis-3.pdf`
+
+### Conceitos Chave de Interação
+
+(Baseado em Shneiderman e Yi et al., como em `InteractionVis.pdf`)
+
+* **"Overview first, zoom and filter, then details-on-demand"** (Shneiderman).
+    * **Overview:** Ganhar uma visão geral da coleção inteira (`InteractionVis-50.pdf`).
+    * **Zoom:** Ampliar itens de interesse (`InteractionVis-37.pdf`, `InteractionVis-50.pdf`).
+        * **Zoom Geométrico vs. Semântico:** Alterar tamanho vs. alterar representação (`InteractionVis-34.pdf`).
+    * **Filter:** Remover itens desinteressantes (`InteractionVis-50.pdf`, `InteractionVis-54.pdf`).
+        * Ex: **Dynamic Queries** (`InteractionVis-9.pdf` a `InteractionVis-16.pdf`).
+    * **Details-on-Demand:** Selecionar um item/grupo para obter mais informações (`InteractionVis-50.pdf`).
+        * Ex: Tooltips (passar o mouse sobre um ponto para ver seus valores).
+
+---
+
+### Mais Técnicas de Interação
+
+* **Linking & Brushing (Seleção Conectada):**
+    * Selecionar (brushing) um subconjunto de dados em uma visualização e ver os mesmos itens destacados (linking) em outras visualizações coordenadas.
+    * **Referência:** `InteractionVis-6.pdf` a `InteractionVis-8.pdf`.
+* **Focus + Context:**
+    * Mostrar uma área de interesse em detalhe (foco) enquanto mantém uma visão geral do restante dos dados (contexto).
+    * Ex: Fisheye views (`InteractionVis-19.pdf`), Bifocal Display (`InteractionVis-27.pdf`), Hyperbolic Trees (`InteractionVis-28.pdf`).
+* **Reconfigure:** Mostrar um arranjo diferente (e.g., mudar ordem dos eixos em coordenadas paralelas). (`InteractionVis-54.pdf`)
+* **Encode:** Mostrar uma representação diferente (e.g., mudar de scatterplot para heatmap). (`InteractionVis-54.pdf`)
+
+---
+
+## Ferramentas em R para Visualização Interativa {background-color="#f4a261" color="white"}
+
+---
+
+### `plotly` para R
+
+* **Conceito:** Cria gráficos interativos baseados em D3.js, com suporte para WebGL.
+* **`ggplotly()`:** Converte gráficos `ggplot2` estáticos em interativos com uma única função.
+    * Adiciona tooltips, zoom, pan, seleção de legenda por padrão.
+* **Sintaxe Nativa `plotly`:** `plot_ly()` para criar gráficos diretamente.
+* **Referência Principal:** "Interactive web-based data visualization with R, plotly, and shiny" by Carson Sievert ([https://plotly-r.com/](https://plotly-r.com/)).
+    * Capítulos iniciais são ótimos para começar com `ggplotly()`.
+
+```{r plotly_example, eval=FALSE, echo=TRUE}
+#| fig-cap: "Exemplo de gráfico ggplot2 tornado interativo com plotly."
+
+# library(ggplot2)
+# library(plotly)
+# data(iris)
+#
+# p_static <- ggplot(iris, aes(x = Sepal.Length, y = Petal.Length, color = Species)) +
+#   geom_point() +
+#   labs(title = "Gráfico Estático ggplot2")
+#
+# print(p_static) # Mostra o gráfico estático
+#
+# p_interactive <- ggplotly(p_static)
+# print(p_interactive) # Mostra o gráfico interativo (no RStudio Viewer ou navegador)
+```
+*Execute este código no RStudio para ver a interatividade.*
+
+---
+
+### `Shiny` para Dashboards e Aplicações Web
+
+* **Conceito:** Framework R para construir aplicações web interativas e dashboards diretamente do R, sem necessidade de HTML/CSS/JavaScript (inicialmente).
+* **Componentes:**
+    * `ui.R` (User Interface): Define o layout e a aparência.
+    * `server.R` (Server Logic): Define como as entradas do usuário afetam as saídas (plots, tabelas).
+* **Utilidade:** Permite criar ferramentas de exploração de dados altamente personalizadas, onde os usuários podem modificar parâmetros, filtrar dados e ver atualizações em tempo real.
+* **Referência Principal:** "Mastering Shiny" by Hadley Wickham ([https://mastering-shiny.org/](https://mastering-shiny.org/)).
+    * Pode ser mais avançado para este curso, mas é bom conhecer como um próximo passo.
+
+*(Uma demonstração de um App Shiny simples pode ser feita se o tempo permitir).*
+
+---
+
+### `crosstalk` para Linking entre HTML Widgets
+
+* **Conceito:** Permite que diferentes visualizações HTML (e.g., múltiplos gráficos `plotly`, tabelas `DT`) em uma mesma página web se comuniquem entre si (linking e brushing sem um servidor Shiny completo).
+* **Utilidade:** Útil para criar painéis de exploração onde a seleção em um gráfico filtra ou destaca dados em outro.
+* **Referência:** Vinhetas do pacote `crosstalk` no CRAN.
+
+---
+
+## Foco do Laboratório / Atividades Práticas (Semana 2)
+
+* Criar SPLOMs (`GGally::ggpairs`) e Coordenadas Paralelas (`GGally::ggparcoord`) para um dataset.
+* Gerar um Heatmap de uma matriz de correlação ou dados tabulares.
+* Aplicar técnicas para reduzir overplotting (transparência, jitter) em gráficos de dispersão.
+* **Introdução à Interatividade:**
+    * Converter um gráfico `ggplot2` existente em um gráfico `plotly` interativo usando `ggplotly()`.
+    * Explorar as interações padrão (hover, zoom, pan).
+    * (Opcional, se o tempo permitir) Criar um gráfico `plotly` nativo simples.
+
+---
+
+## Conclusão e Próximos Passos
+
+* A visualização multivariada e interativa são ferramentas poderosas para a exploração de dados complexos.
+* R, com pacotes como `GGally`, `plotly`, e `shiny`, oferece um ecossistema rico para criar essas visualizações.
+* **Próxima Semana (Semana 3):** Métodos de Reamostragem I: Bootstrap & Jackknife.
+
+---
+
+## Dúvidas?
+

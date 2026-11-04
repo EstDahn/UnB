@@ -1,0 +1,237 @@
+---
+title: "Guia Prático: Criando Slides com Quarto"
+subtitle: "Computação em Estatística II"
+author: "Prof. Donald M. Pianto"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    scrollable: true
+    logo: "https://quarto.org/quarto.png"
+    footer: "Criando Slides com Quarto"
+lang: pt
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Olá, Quarto para Slides!
+
+Na nossa introdução ao Quarto, vimos como ele combina texto e código para criar documentos. Hoje, vamos focar numa de suas aplicações mais poderosas: a criação de apresentações de slides.
+
+O objetivo é aprender a controlar a estrutura e a aparência dos nossos slides, e você está certo: a maior parte do controlo acontece no cabeçalho **YAML**.
+
+---
+
+## Quarto vs. R Markdown para Slides
+
+-   **R Markdown:** Oferecia vários "motores" para criar slides (como `ioslides`, `slidy`, `xaringan`). Cada um tinha sua própria sintaxe e opções.
+-   **Quarto:** Unifica e simplifica este processo. Os dois formatos principais já vêm integrados e são extremamente poderosos:
+    1.  **`revealjs`**: Para criar apresentações HTML modernas e interativas. **(Será o nosso foco principal)**.
+    2.  **`beamer`**: Para criar apresentações em PDF, usando LaTeX. Ideal para contextos académicos.
+
+Quarto é o sucessor do R Markdown, oferecendo uma experiência mais consistente e com mais funcionalidades.
+
+---
+
+## A Estrutura Básica de Slides
+
+A regra mais importante é simples:
+
+-   Um cabeçalho de Nível 2 (`##`) **sempre** inicia um novo slide.
+-   Um cabeçalho de Nível 1 (`#`) é geralmente reservado para o título da apresentação no YAML.
+
+```{=html}
+<!-- 
+## Slide 1
+
+Conteúdo do primeiro slide.
+
+---
+
+## Slide 2
+
+Conteúdo do segundo slide. 
+-->
+```
+
+Cabeçalhos de nível inferior (`###`, `####`) criam títulos dentro de um slide, mas não criam um novo slide.
+
+---
+
+## Formato 1: `revealjs` (Slides HTML)
+
+Este é o formato mais versátil e interativo, ideal para apresentações em aula e na web.
+
+### O YAML Mínimo
+
+Para começar, tudo o que você precisa no cabeçalho YAML é:
+
+```yaml
+---
+title: "Minha Apresentação"
+author: "Meu Nome"
+format: revealjs
+---
+```
+
+---
+
+### Customização Essencial via YAML
+
+É aqui que a mágica acontece. Podemos adicionar opções sob a chave `revealjs` para customizar tudo.
+
+#### Temas e Transições
+
+O Quarto oferece vários temas visuais e efeitos de transição entre slides.
+
+```yaml
+---
+format:
+  revealjs:
+    theme: solarized  # Outros temas: dark, blood, moon, sky, etc.
+    transition: fade    # Outras transições: slide, convex, zoom, none
+---
+```
+
+**Exemplos de Temas Populares:** `simple`, `dark`, `serif`, `solarized`, `blood`, `moon`.
+
+---
+
+### Layout do Slide: Múltiplas Colunas
+
+Frequentemente, queremos mostrar código ou um gráfico ao lado de um texto explicativo. Usamos a sintaxe de *divs* do Pandoc para criar colunas.
+
+````markdown
+::: {.columns}
+
+::: {.column width="50%"}
+**Coluna da Esquerda**
+
+-   Podemos colocar texto aqui.
+-   Listas, equações, etc.
+```{r}
+# E até mesmo código
+x <- 1:5
+mean(x)
+```
+:::
+
+::: {.column width="50%"}
+**Coluna da Direita**
+
+Podemos colocar uma imagem ou um gráfico.
+
+```{r, echo=FALSE}
+library(ggplot2)
+ggplot(mtcars, aes(wt, mpg)) + geom_point() + theme_light()
+```
+:::
+
+:::
+````
+
+---
+
+### Conteúdo Incremental (Pausas)
+
+Para revelar o conteúdo de um slide passo a passo, use ` > . . . ` entre os elementos que você quer que apareçam sequencialmente.
+
+````markdown
+-   Este é o primeiro ponto.
+ > . . .
+-   Este é o segundo ponto (aparece após um clique).
+ > . . .
+-   E este é o terceiro.
+````
+
+Isso funciona para listas, parágrafos, imagens, e quase qualquer outro elemento no slide.
+
+---
+
+### Adicionando Logo e Rodapé
+
+É fácil adicionar um logo e um rodapé persistente em todos os slides através do YAML.
+
+```yaml
+---
+format:
+  revealjs:
+    logo: "minha_logo.png" # Caminho para a imagem
+    footer: "Texto do Rodapé - CE2R"
+---
+```
+*(Veja o logo do Quarto no canto desta apresentação e o rodapé!)*
+
+---
+
+## Formato 2: `beamer` (Slides PDF)
+
+Para gerar slides em PDF, usamos o formato `beamer`. Ele requer uma instalação de LaTeX (como o TinyTeX).
+
+### O YAML Mínimo
+
+A mudança é simples:
+
+```yaml
+---
+title: "Minha Apresentação"
+format: beamer
+---
+```
+
+---
+
+### Customização Essencial do `beamer`
+
+O `beamer` também tem temas para controlar a aparência.
+
+```yaml
+---
+format:
+  beamer:
+    theme: Madrid       # Temas populares: Warsaw, Berlin, Singapore
+    colortheme: beaver  # Esquemas de cores: dolphin, orchid, whale
+    toc: true           # Adiciona um sumário no início da apresentação
+---
+```
+
+A estrutura do conteúdo (código, Markdown, colunas) permanece a mesma do `revealjs`, o que torna a transição entre formatos muito fácil.
+
+---
+
+## Elementos Comuns (Revisão)
+
+Lembre-se que tudo o que você já aprendeu sobre Quarto continua a funcionar em slides:
+
+-   **Chunks de Código:** Use ``` `{r}` ``` para inserir código R.
+-   **Opções de Chunk:** Controle a execução e exibição com `#| echo: true/false`, `#| eval: true/false`, etc.
+-   **Figuras e Tabelas:** Gráficos do `ggplot2` e tabelas do `knitr::kable()` são formatados automaticamente.
+-   **Equações:** Use a sintaxe LaTeX com `$` e `$$`.
+
+---
+
+## Resumo e Dicas Finais
+
+1.  **YAML é o Centro de Controlo:** Defina o formato (`revealjs` ou `beamer`) e as opções de aparência no cabeçalho.
+2.  **`##` para Novos Slides:** Use cabeçalhos de nível 2 para estruturar sua apresentação.
+3.  **Use Colunas:** `::: {.columns}` é seu amigo para organizar o conteúdo.
+4.  **Revele aos Poucos:** Use ` > . . . ` para manter a atenção do público.
+5.  **Escolha o Formato Certo:**
+    * `revealjs`: Para apresentações modernas, interativas e baseadas na web.
+    * `beamer`: Para PDFs, artigos académicos e quando a impressão é importante.
+
+O melhor de tudo: você pode ter ambos no mesmo ficheiro!
+
+```yaml
+---
+title: "Minha Apresentação"
+format:
+  revealjs: default
+  beamer: default
+---
+
+```

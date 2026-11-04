@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz - Aula 11: Externalidades e Bens Públicos</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.72em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Externalidades e Bens Públicos</h1>
+<p>Quiz Adaptativo — Aula 11 · Introdução à Economia · UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreensão de <strong>externalidades (negativas e positivas), soluções (Coase, impostos pigouvianos, regulação), bens públicos e recursos comunitários</strong> (Mankiw, Caps. 10 e 11).<br>Se errar uma questão principal, você receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Uma fábrica de cimento em Cubatão emite poluentes que causam doenças respiratórias nos moradores próximos. A fábrica compra insumos, paga salários e energia.",texto:"O custo externo da fábrica corresponde a:",alternativas:["O lucro da fábrica","O salário dos trabalhadores","O sofrimento e gastos médicos dos moradores afetados","O preço do cimento no mercado"],correta:2,explicacao:"O <strong>custo externo</strong> é o que recai sobre <strong>terceiros</strong> que não participam da transação --- aqui, os moradores que adoecem com a poluição. Custo social = custo privado (insumos, salários) + custo externo."},
+{principio:1,tipo:"principal",contexto:"Quando você se vacina contra a gripe, você se protege e também reduz a chance de transmitir o vírus a colegas, idosos e bebês.",texto:"A vacinação é um exemplo de:",alternativas:["Externalidade negativa","Externalidade positiva","Bem público puro","Recurso comunitário"],correta:1,explicacao:"É uma <strong>externalidade positiva</strong>: sua decisão privada (vacinar-se) gera benefício para terceiros (que não pegam a doença de você). Por isso o valor social é maior que o valor privado."},
+{principio:1,tipo:"principal",contexto:"Mercado com externalidade negativa: oferta privada (custo privado) abaixo da curva de custo social. Demanda inalterada.",texto:"Quando há externalidade negativa, a quantidade de equilíbrio do mercado é:",alternativas:["Igual à quantidade socialmente eficiente","Maior que a quantidade socialmente eficiente","Menor que a quantidade socialmente eficiente","Sempre zero"],correta:1,explicacao:"O produtor ignora o custo externo, então sua oferta está <strong>abaixo</strong> do verdadeiro custo social. O mercado equilibra em <strong>Q maior que Q*</strong> --- há produção <strong>em excesso</strong> e peso morto."},
+{principio:1,tipo:"reforco",contexto:"Externalidades: efeito sobre terceiros não capturado pelo preço. Negativa = custo social > privado (excesso). Positiva = valor social > privado (subconsumo).",texto:"O barulho de uma festa na madrugada que acorda os vizinhos é melhor caracterizado como:",alternativas:["Externalidade positiva","Externalidade negativa","Bem público","Recurso comunitário"],correta:1,explicacao:"O bem-estar de terceiros (vizinhos) é <strong>reduzido</strong> sem que esse custo apareça no ``preço'' da festa --- típica <strong>externalidade negativa</strong>."},
+{principio:2,tipo:"principal",contexto:"Externalidade positiva no mercado de educação superior: valor privado (renda futura individual) abaixo do valor social (cidadania, menos crime, inovação).",texto:"Quando há externalidade positiva, a quantidade de equilíbrio do mercado é:",alternativas:["Igual à quantidade socialmente eficiente","Maior que a quantidade socialmente eficiente","Menor que a quantidade socialmente eficiente","Não pode ser determinada"],correta:2,explicacao:"O consumidor ignora o benefício externo, então sua demanda está <strong>abaixo</strong> do verdadeiro valor social. O mercado equilibra em <strong>Q menor que Q*</strong> --- há <strong>subconsumo</strong> e peso morto."},
+{principio:2,tipo:"principal",contexto:"Considere o gráfico de poluição: D, S=Custo Privado, S+ext=Custo Social. O mercado opera em Q_mercado e o eficiente é Q*.",texto:"O peso morto da externalidade negativa é:",alternativas:["Toda a área entre D e S","O lucro da firma poluidora","O triângulo entre custo social e demanda, de Q* até Q_mercado","O imposto cobrado pelo governo"],correta:2,explicacao:"O <strong>peso morto</strong> são as unidades produzidas além de Q* em que o <strong>custo social supera o valor</strong> para o consumidor. Geometricamente, é o triângulo entre Custo Social e Demanda, de Q* a Q_mercado."},
+{principio:2,tipo:"principal",contexto:"Um imposto pigouviano sobre uma fábrica poluidora desloca a curva de oferta privada para cima.",texto:"O imposto pigouviano ideal faz com que a nova curva de oferta:",alternativas:["Fique abaixo da oferta original","Coincida com a curva de custo social","Coincida com a curva de demanda","Vire horizontal"],correta:1,explicacao:"O imposto ótimo é igual ao <strong>custo externo marginal</strong>. Adicionado ao custo privado, ele <strong>desloca a oferta para coincidir com o custo social</strong>. O equilíbrio passa a ser <strong>voluntariamente</strong> em Q*."},
+{principio:2,tipo:"reforco",contexto:"Em externalidade positiva (ex.: vacina), valor social > valor privado. Subsídio adequado desloca a demanda privada para cima até coincidir com valor social.",texto:"Para uma externalidade positiva, o instrumento corretivo simétrico ao imposto pigouviano é:",alternativas:["Outro imposto","Um subsídio sobre a atividade","Proibir a atividade","Fechar o mercado"],correta:1,explicacao:"Para externalidade <strong>positiva</strong>, o governo deve <strong>subsidiar</strong> a atividade para fazer mais pessoas consumirem. O SUS oferecer vacina de graça é um subsídio integral."},
+{principio:2,tipo:"principal",contexto:"Dico tem um cachorro que late. O barulho incomoda Júlia em R$80/mês. Para Dico, ter o cão livre vale R$50/mês. Não há custo legal para negociar.",texto:"Segundo o Teorema de Coase, o resultado eficiente é:",alternativas:["O cão fica livre, pois Dico chegou primeiro","O cão é silenciado --- Júlia paga a Dico um valor entre R$50 e R$80","Júlia se muda","O governo proíbe cães"],correta:1,explicacao:"O resultado eficiente é o que <strong>maximiza o ganho total</strong>: silenciar o cão (ganho de R$80 > perda de R$50). Coase mostra que, com custos de transação baixos, as partes <strong>negociam</strong> e chegam ao eficiente, independentemente de quem ``tem o direito''."},
+{principio:2,tipo:"principal",contexto:"Imposto pigouviano vs. regulação igualitária. Empresa A reduz poluição a R$10/ton; empresa B a R$100/ton. Meta: reduzir 50% no setor.",texto:"Por que o imposto pigouviano é, em geral, mais eficiente que a regulação igualitária?",alternativas:["Imposto arrecada mais","Cada firma reduz na medida em que isso lhe é barato; quem reduz caro paga; mesmo total a menor custo","Regulação é ilegal","Imposto elimina toda a poluição"],correta:1,explicacao:"Com imposto, A (que reduz barato) corta muito; B (que reduz caro) corta pouco e paga o imposto. A redução total é a mesma, mas o <strong>custo total para a sociedade é menor</strong>. Regulação igualitária ignora as diferenças entre empresas."},
+{principio:3,tipo:"principal",contexto:"Os bens são classificados em 4 tipos segundo duas dimensões: rivalidade (uso de um diminui o do outro) e exclusão (impedir quem não paga).",texto:"Um bem público (puro) é caracterizado por ser:",alternativas:["Rival e excludente","Rival e não-excludente","Não-rival e excludente","Não-rival e não-excludente"],correta:3,explicacao:"<strong>Bem público</strong>: não-rival (uso de um não diminui o do outro) E não-excludente (não dá para impedir o uso). Exemplos: defesa nacional, iluminação pública. Por isso o mercado privado falha (free riders)."},
+{principio:3,tipo:"principal",contexto:"A iluminação pública de Brasília atende cerca de 300 mil pontos. É financiada pela Contribuição de Iluminação Pública (CIP), cobrada compulsoriamente na conta de luz.",texto:"Por que a iluminação pública precisa ser financiada compulsoriamente, e não vendida no mercado?",alternativas:["É barata demais para ter mercado","Por ser não-excludente, ninguém pagaria voluntariamente (problema do free rider)","Porque o governo gosta de cobrar","Porque é um monopólio natural"],correta:1,explicacao:"Sendo <strong>não-excludente</strong>, qualquer um se beneficia sem pagar. Cada pessoa, racionalmente, espera que outros paguem (<strong>free rider</strong>). Resultado: ninguém paga, ninguém ilumina. A solução é a tributação compulsória."},
+{principio:4,tipo:"principal",contexto:"Os peixes em alto mar podem ser pescados por qualquer barco; cada peixe pescado é um peixe a menos para os demais.",texto:"Os peixes em alto mar são um exemplo de:",alternativas:["Bem público","Bem privado","Recurso comunitário (rival e não-excludente)","Monopólio natural"],correta:2,explicacao:"<strong>Recurso comunitário</strong>: <strong>rival</strong> (peixe pego não está mais lá) e <strong>não-excludente</strong> (não dá para impedir barcos no mar). Daí a tendência à <strong>sobrepesca</strong> --- a problema dos recursos comunitários."},
+{principio:4,tipo:"principal",contexto:"Problema dos recursos comunitários (Hardin, 1968): pastagem comum, cada pastor adiciona mais um animal e ganha tudo, mas divide o custo da degradação com os demais.",texto:"A problema dos recursos comunitários ocorre porque:",alternativas:["O governo é incompetente","Cada usuário do recurso comunitário impõe externalidade negativa aos demais usuários, e isso leva ao uso excessivo","Recursos naturais são raros","Não há demanda pelo recurso"],correta:1,explicacao:"A lógica do sobre-uso: cada usuário <strong>ignora o efeito</strong> de seu uso sobre os demais. É uma <strong>externalidade negativa entre usuários</strong> $\\Rightarrow$ uso excessivo $\\Rightarrow$ esgotamento do recurso. Soluções: regulação, taxas, direitos de propriedade ou gestão comunitária (Ostrom)."},
+{principio:4,tipo:"reforco",contexto:"Recursos comunitários (rivais, não-excludentes) sofrem da problema dos recursos comunitários. Soluções: cotas, defeso, privatização parcial, gestão comunitária.",texto:"O defeso da piracema (proibição de pesca em época de reprodução) no Brasil é um exemplo de:",alternativas:["Imposto pigouviano","Regulação para mitigar a problema dos recursos comunitários","Subsídio à pesca","Privatização das águas"],correta:1,explicacao:"O <strong>defeso</strong> é uma forma de <strong>regulação direta</strong> que visa preservar o estoque de peixes (recurso comunitário). Ele evita que cada pescador esgote o recurso pensando ``se eu não pegar, outro pega''."},
+{principio:3,tipo:"reforco",contexto:"Matriz 2x2 dos bens: bens privados, bens públicos, recursos comunitários, monopólios naturais. A célula define se o mercado privado funciona ou não.",texto:"Qual destes é mais bem classificado como BEM PÚBLICO?",alternativas:["Sorvete","Defesa nacional","Pesca em alto mar","Sinal de TV a cabo"],correta:1,explicacao:"<strong>Defesa nacional</strong>: ninguém pode ser excluído (não-excludente) e a proteção de um não diminui a do outro (não-rival). Sorvete = privado; pesca = recurso comunitário; TV a cabo = monopólio natural."}
+];
+var NOMES={1:"Externalidades",2:"Soluções (Coase, impostos)",3:"Bens Públicos",4:"Recursos Comuns"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=4;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=4;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem externalidades, bens públicos e recursos comunitários.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e os Capítulos 10 e 11 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=4;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise o conceito de externalidade (efeito sobre terceiros não refletido no preço). Negativa: custo social > custo privado, mercado produz EM EXCESSO. Positiva: valor social > valor privado, mercado produz em FALTA.",2:"Revise o gráfico do peso morto e as soluções. Coase: negociação privada funciona com custos de transação baixos. Imposto pigouviano: desloca a oferta privada para o custo social. Subsídio para externalidade positiva.",3:"Revise a matriz 2x2: bens públicos são não-rivais E não-excludentes (defesa, iluminação). O free rider impede que o mercado privado os forneça --- por isso o governo provê via tributos.",4:"Revise recursos comunitários (rivais, não-excludentes) e a problema dos recursos comunitários. Cada usuário impõe externalidade aos demais, levando ao esgotamento. Soluções: regulação (defeso), cotas, taxas, gestão comunitária (Ostrom)."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

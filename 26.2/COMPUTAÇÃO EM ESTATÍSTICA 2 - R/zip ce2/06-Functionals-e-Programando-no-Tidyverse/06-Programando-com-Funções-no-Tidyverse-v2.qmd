@@ -1,0 +1,259 @@
+---
+title: "Programando com Funções no Tidyverse (Versão Aprimorada)"
+subtitle: "Computação em Estatística II"
+author: "Prof. Donald M. Pianto"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-fold: false
+execute:
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Nas últimas aulas, aprendemos a criar nossas próprias funções e a usar *functionals* como `purrr::map()` para aplicá-las a múltiplos inputs. Esta é uma combinação poderosa para automatizar tarefas repetitivas.
+
+Um passo natural é tentar encapsular um pipeline do `dplyr` dentro de uma função. Por exemplo, como poderíamos criar uma função que agrupa um data frame por uma coluna especificada pelo usuário e depois calcula uma estatística?
+
+Hoje, vamos descobrir por que essa tarefa, que parece simples, introduz um novo desafio em R e como resolvê-lo. Dominar esta técnica, chamada **Tidy Evaluation**, irá desbloquear um novo nível de poder de programação no `tidyverse`.
+
+```{r setup}
+library(ggplot2)
+library(dplyr)
+library(rlang)
+library(palmerpenguins) # Usaremos para os exemplos
+```
+
+---
+
+## 1. O Problema: Por que Nossas Funções com `dplyr` Quebram?
+
+Vamos começar com um objetivo simples: criar uma função que agrupa os dados de `penguins` por uma coluna e calcula uma estatística.
+
+Intuitivamente, poderíamos tentar escrever algo assim:
+
+```{r, error=TRUE}
+# Tentativa 1: Uma função que parece lógica, mas falha
+sumarizar_pinguins <- function(df, coluna_de_agrupamento) {
+  df |>
+    group_by(coluna_de_agrupamento) |>
+    summarise(massa_media = mean(body_mass_g, na.rm = TRUE))
+}
+
+# Vamos tentar usar a função. Ela irá falhar!
+# sumarizar_pinguins(penguins, species)
+```
+
+Este código falha. A razão está na **Avaliação Não-Padrão** (Non-Standard Evaluation - NSE). Funções do `dplyr` como `group_by`, `summarise`, `mutate`, etc., são especiais. Elas não avaliam seus argumentos da maneira usual do R.
+
+* **R Padrão:** Quando você passa `species` para uma função normal, o R procura por um objeto chamado `species` no ambiente e passa seu valor.
+* **`dplyr` (NSE):** Quando você passa `species` para `group_by()`, ele não procura o *valor* de `species`. Em vez disso, ele **captura a expressão** `species` e a interpreta no contexto do data frame.
+
+Dentro da nossa função `sumarizar_pinguins`, o `dplyr` recebe o argumento `coluna_de_agrupamento`. Ele tenta encontrar uma coluna com o nome literal "coluna\_de\_agrupamento" dentro do data frame, e não a expressão que o usuário passou (`species`).
+
+Como podemos dizer à nossa função para "desembrulhar" o argumento e passar a expressão correta para o `dplyr`? A resposta é **metaprogramação**.
+
+---
+
+## 2. A Solução: Capturar e Injetar Código
+
+Para fazer nossa função funcionar, precisamos de um processo de duas etapas que forma a base da *tidy evaluation*. Isso nos ajuda a entender *como* a mágica funciona.
+
+### Passo A: Capturar a Expressão do Usuário
+
+Primeiro, precisamos dizer à nossa função para capturar o que o usuário digitou sem avaliá-lo imediatamente. A ferramenta para isso no pacote `rlang` é `enquo()`. Ela "encapsula" a expressão em uma estrutura especial chamada *quosure*, que guarda tanto a expressão quanto o ambiente onde ela foi criada.
+
+```{r}
+minha_funcao_captura <- function(argumento) {
+  rlang::enquo(argumento)
+}
+
+# A expressão `island` é capturada, não avaliada.
+capturado <- minha_funcao_captura(island)
+print(capturado)
+```
+
+### Passo B: Injetar a Expressão Capturada
+
+Depois de capturar a expressão, precisamos de uma forma de injetá-la no `group_by()`, forçando o `dplyr` a avaliar a expressão que capturamos. A ferramenta para isso é o operador **`!!`** (lê-se "bang-bang").
+
+O `!!` funciona como um "desembrulhador". Ele diz a uma função do `dplyr`: "Não olhe para esta variável, olhe para a expressão que está *dentro* dela".
+
+### A Primeira Solução Funcional (O Mecanismo por Trás da Mágica)
+
+Vamos combinar `enquo()` e `!!` para consertar nossa função:
+
+```{r}
+sumarizar_pinguins_v1 <- function(df, coluna_de_agrupamento) {
+  # Passo A: Capturar a expressão do usuário
+  coluna_capturada <- rlang::enquo(coluna_de_agrupamento)
+  
+  df |>
+    group_by(!!coluna_capturada) |> # Passo B: Injetar com !!
+    summarise(massa_media = mean(body_mass_g, na.rm = TRUE))
+}
+
+# Agora funciona!
+sumarizar_pinguins_v1(penguins, species)
+```
+
+Este padrão (`enquo()` + `!!`) foi a forma padrão de programar com `dplyr` por anos. Vocês verão muito código assim em exemplos online e em pacotes mais antigos. É crucial saber reconhecê-lo para entender o que está acontecendo.
+
+---
+
+## 3. A Ferramenta Moderna: O Operador `{{{ }}}`
+
+Como o padrão de capturar e injetar é muito comum, o `tidyverse` criou um atalho que faz as duas coisas ao mesmo tempo: o operador `{{{ }}}` (lê-se "curly-curly" ou "abraço").
+
+O operador `{{{ }}}` **substitui** a combinação de `enquo()` na função e `!!` na chamada do `dplyr`. Ele captura e injeta o argumento em um único passo.
+
+### A Solução Final e Elegante
+
+Vamos reescrever nossa função usando a abordagem moderna. Ela é mais limpa, mais curta e mais fácil de ler.
+
+```{r}
+sumarizar_pinguins_moderna <- function(df, coluna_de_agrupamento) {
+  df |>
+    group_by({{ coluna_de_agrupamento }}) |>
+    summarise(massa_media = mean(body_mass_g, na.rm = TRUE))
+}
+
+# Funciona perfeitamente e é mais legível
+sumarizar_pinguins_moderna(penguins, island)
+```
+
+Esta é a abordagem que vocês devem usar ao escrever suas próprias funções. É a melhor prática atual.
+
+---
+
+## 4. Guia de Referência e Casos de Uso
+
+A Tidy Evaluation é flexível. Vamos ver como aplicá-la em situações que vocês encontraram (e encontrarão) na prática.
+
+### Usando Nomes de Colunas em Strings
+
+E se o nome da coluna estiver em uma string (um vetor de caracteres), como `"species"`? Isso é comum em laços `for` ou ao interagir com outras funções (ex: inputs do Shiny).
+
+Neste caso, `{{{ }}}` não funciona. A solução é usar o pronome **`.data`**. O `.data` refere-se ao data frame atual e permite usar a indexação `[[ ]]` para acessar colunas cujos nomes estão em strings.
+
+```{r}
+colunas_para_contar <- c("species", "island", "sex")
+
+# Usamos um laço para criar uma contagem para cada coluna
+for (col in colunas_para_contar) {
+  cat("\nContagem para a coluna:", col, "\n")
+  resultado <- penguins |>
+    count(.data[[col]]) # Usamos .data[[...]] para acessar a coluna
+  
+  print(resultado)
+}
+```
+
+### Lidando com Múltiplas Colunas de Agrupamento
+
+Um desafio comum é criar uma função que agrupe por uma *ou mais* colunas. A nossa função `sumarizar_pinguins_moderna` falha se tentarmos passar `c(species, island)`.
+
+```{r, error=TRUE}
+# Esta chamada irá falhar!
+# sumarizar_pinguins_moderna(penguins, c(species, island))
+```
+
+A solução robusta é usar a função `across()` dentro do `group_by()`. `across()` foi projetado para aplicar uma seleção tidy a um argumento, permitindo que ele entenda tanto uma única coluna quanto um vetor de colunas.
+
+```{r}
+sumarizar_multi_grupos <- function(df, vars_grupo, var_sumario) {
+  df |>
+    # across() permite que {{vars_grupo}} seja uma ou mais colunas
+    group_by(across({{ vars_grupo }})) |>
+    summarise("media_{{var_sumario}}" := mean({{ var_sumario }}, na.rm = TRUE))
+}
+
+# Agora funciona para um grupo
+sumarizar_multi_grupos(penguins, species, body_mass_g)
+
+# E também para múltiplos grupos!
+sumarizar_multi_grupos(penguins, c(species, island), body_mass_g)
+```
+
+### Criando Nomes de Colunas Dinamicamente
+
+Queremos que o nome da nova coluna em `summarise` ou `mutate` dependa da variável de entrada. Para isso, usamos o operador `:=` (lê-se "colon-equals") e a sintaxe de "cola" (do pacote `glue`), que permite inserir o nome da variável numa string.
+
+```{r}
+# Função que calcula a média e nomeia a saída dinamicamente
+media_com_nome_dinamico <- function(df, coluna) {
+  df |>
+    summarise("media_{{coluna}}" := mean({{ coluna }}, na.rm = TRUE))
+}
+
+media_com_nome_dinamico(penguins, body_mass_g)
+media_com_nome_dinamico(penguins, flipper_length_mm)
+```
+
+---
+
+## 5. Tópicos Avançados: Funções Condicionais e Validação
+
+Para criar funções verdadeiramente robustas, precisamos adicionar lógica para lidar com argumentos opcionais e validar as entradas do usuário.
+
+### Lógica Condicional para Argumentos Opcionais
+
+No Problema 4 da tarefa, a função `plotar_avancado` tinha um argumento opcional `var_facet`. Como verificamos se o usuário forneceu esse argumento? Uma abordagem robusta é capturar o argumento com `enquo()` e verificar se ele é nulo com `quo_is_null()`.
+
+```{r}
+# Função de exemplo que adiciona facetas apenas se o argumento for fornecido
+plotar_com_facetas_opcionais <- function(df, var_x, var_y, var_facet = NULL) {
+  
+  p <- ggplot(df, aes(x = {{ var_x }}, y = {{ var_y }})) +
+    geom_point()
+    
+  # Verificamos se var_facet foi fornecido antes de adicionar a camada de facetas
+  if (!rlang::quo_is_null(enquo(var_facet))) {
+    p <- p + facet_wrap(vars({{ var_facet }}))
+  }
+  
+  return(p)
+}
+
+# Sem facetas
+plotar_com_facetas_opcionais(penguins, bill_length_mm, bill_depth_mm)
+
+# Com facetas
+plotar_com_facetas_opcionais(penguins, bill_length_mm, bill_depth_mm, var_facet = species)
+```
+
+### Validação de Entradas
+
+Uma função robusta deve falhar de forma previsível se o usuário fornecer entradas inválidas (ex: uma coluna de texto onde se espera um número). A melhor prática é verificar as entradas no início da função e usar `stop()` para interromper a execução com uma mensagem de erro clara.
+
+Para verificar o tipo de uma coluna passada com `{{{ }}}`, podemos usar `pull()` para extrair a coluna e, em seguida, `is.numeric()` (ou outra função de verificação).
+
+```{r}
+# Função que só funciona com variáveis numéricas
+media_segura <- function(df, var_numerica) {
+  # Validação: extrai a coluna e verifica se é numérica
+  coluna_dados <- df |> pull({{ var_numerica }})
+  if (!is.numeric(coluna_dados)) {
+    # Se não for, para com um erro informativo
+    stop(paste("A variável", as_name(enquo(var_numerica)), "deve ser numérica."))
+  }
+  
+  # Lógica principal
+  df |>
+    summarise(media = mean({{ var_numerica }}, na.rm = TRUE))
+}
+
+# Funciona
+media_segura(penguins, body_mass_g)
+
+# Falha com um erro claro (como esperado)
+try(media_segura(penguins, island), silent = FALSE)
+```

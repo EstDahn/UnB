@@ -1,0 +1,346 @@
+---
+title: "Usando Arrays em R"
+author: "Prof. dmp (adaptado do Prof. Guilherme)"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    theme: cosmo 
+    code-fold: false
+lang: pt
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Introdução aos Arrays em R
+
+Neste documento, exploraremos o uso de objetos do tipo `array` em R.
+
+**O que é um Array?**
+
+Em R, um array é uma estrutura de dados que pode armazenar dados em mais de duas dimensões (n-dimensional). Uma característica fundamental dos arrays é que todos os seus elementos devem ser do **mesmo tipo de dado** (por exemplo, todos numéricos, todos caracteres ou todos lógicos).
+
+Podemos pensar em outras estruturas de dados como casos especiais de arrays:
+
+* Um **vetor** é, essencialmente, um array de 1 dimensão.
+* Uma **matriz** é um array de 2 dimensões (linhas e colunas).
+
+Arrays generalizam essa ideia para 3, 4, ou mais dimensões, permitindo organizar dados de forma mais complexa.
+
+Arrays são particularmente úteis para:
+
+* Organizar dados que possuem múltiplas categorias ou facetas (ex: dados de vendas por produto, por região, ao longo do tempo).
+* Dados de painel (observações de múltiplos indivíduos ao longo do tempo, para múltiplas variáveis).
+* Resultados de simulações ou experimentos com múltiplos fatores.
+* Representar tensores em computação científica.
+
+Primeiramente, vamos carregar os pacotes que utilizaremos.
+
+```{r setup_pacotes}
+library(tidyverse)
+library(reshape2)
+```
+
+## Reformatando de Data Frame para Array
+
+Muitas vezes, nossos dados estão em um formato "longo" (formato tidy). Para certas análises, pode ser útil reformatar esses dados para uma estrutura de array.
+
+### Carregando os Dados
+
+O banco de dados, salvo como "Banco_respostas.csv", traz as respostas dos alunos da disciplina de Probabilidade e Estatística no primeiro semestre de 2019.
+
+```{r leitura_dados}
+dados_tidy <- read_csv2("Banco_respostas.csv", 
+                        locale = locale(encoding = "windows-1252"))
+
+cat("Primeiras linhas do data frame 'dados_tidy':\n")
+print(head(dados_tidy))
+```
+
+### Usando `reshape2::acast()` para Criar um Array
+
+A função `acast()` do pacote `reshape2` é uma ferramenta poderosa para transformar um data frame do formato longo para um formato de array.
+
+```{r transformacao_acast}
+# A fórmula define as dimensões do array:
+# Matricula ~ Questao ~ Numero.prova
+dados_array <- acast(dados_tidy, 
+                     Matricula ~ Questao ~ Numero.prova, 
+                     value.var = "Acertou")
+
+cat("\nDimensões do 'dados_array' (Matricula, Questao, Numero.prova):\n")
+print(dim(dados_array))
+
+# Substituindo os valores NA por zero.
+dados_array[is.na(dados_array)] <- 0
+
+# Dando nomes às dimensões.
+dimnames(dados_array)[[2]] <- paste0("Questao_", 1:dim(dados_array)[2])
+dimnames(dados_array)[[3]] <- paste0("P", 1:dim(dados_array)[3])
+
+cat("\nFatia do 'dados_array' (2 alunos, 3 questões, 2 provas):\n")
+print(dados_array[1:2, 1:3, 1:2]) 
+```
+
+## Criação Direta de Arrays com `array()`
+
+Podemos criar arrays diretamente em R usando a função `array()`.
+
+```{r criacao_direta_array}
+dados_para_array <- 1:12
+
+meu_array_exemplo <- array(
+  data = dados_para_array, 
+  dim = c(2, 3, 2),
+  dimnames = list( 
+    c("Regiao_Norte", "Regiao_Sul"),        
+    c("Produto_A", "Produto_B", "Produto_C"),
+    c("Ano_2023", "Ano_2024")               
+  )
+)
+
+cat("\nArray 'meu_array_exemplo' criado diretamente:\n")
+print(meu_array_exemplo)
+```
+
+## Operações Básicas com Arrays
+
+### Subsetting (Indexação)
+
+Acessamos elementos de um array usando colchetes `[]`, separando os índices de cada dimensão por vírgulas.
+
+```{r subsetting_array}
+# Extraindo uma "fatia" inteira (toda a camada "Ano_2024")
+cat("\nCamada 'Ano_2024' de 'meu_array_exemplo':\n")
+print(meu_array_exemplo[, , "Ano_2024"]) 
+```
+
+### Sumarização com `apply()`
+
+A função `apply()` é usada para aplicar uma função às margens (dimensões) de um array.
+
+**Sintaxe:** `apply(X, MARGIN, FUN)`
+
+* `MARGIN`: Um vetor de inteiros indicando as dimensões que devem ser **mantidas**.
+
+```{r sumarizacao_apply}
+# Calculando a nota de cada aluno em cada prova
+# MARGIN = c(1, 3): manter Matricula e Numero.prova, aplicar sum() sobre Questao.
+notas_provas <- apply(dados_array, MARGIN = c(1, 3), FUN = sum)
+cat("\nNotas dos primeiros alunos por prova (usando apply):\n")
+print(head(notas_provas)) 
+
+# Calculando a taxa de acerto média por prova
+# MARGIN = 3: manter Numero.prova, aplicar mean() sobre Matricula e Questao.
+taxa_acerto_prova <- apply(dados_array, MARGIN = 3, FUN = mean)
+cat("\nTaxa de acerto média por prova:\n")
+print(taxa_acerto_prova)
+```
+
+### Comparando com `dplyr` e `tidyr::pivot_wider`
+
+A mesma sumarização de `notas_provas` pode ser feita com `dplyr` a partir dos dados originais `dados_tidy`. Para obter uma estrutura "larga" similar à matriz `notas_provas`, usamos `tidyr::pivot_wider`.
+
+```{r sumarizacao_dplyr_pivot}
+# Primeiro, calculamos a nota (soma de 'Acertou') por Matricula e Numero.prova
+notas_tidy_sumarizadas <- dados_tidy %>% 
+  group_by(Matricula, Numero.prova) %>%
+  summarize(Nota = sum(Acertou, na.rm = TRUE), .groups = 'drop')
+
+cat("\nNotas sumarizadas em formato tidy (longo):\n")
+print(head(notas_tidy_sumarizadas))
+
+# Usando pivot_wider para transformar para o formato largo (wide)
+notas_wide_tibble <- notas_tidy_sumarizadas %>%
+  pivot_wider(
+    names_from = Numero.prova, 
+    values_from = Nota,
+    names_prefix = "P",
+    values_fill = 0 
+  )
+
+cat("\nNotas em formato wide usando pivot_wider (tibble):\n")
+print(head(notas_wide_tibble))
+```
+Observe que `notas_provas` (criado com `apply`) é uma matriz onde `Matricula` são os nomes das linhas. Já `notas_wide_tibble` (criado com `pivot_wider`) é um tibble onde `Matricula` é uma coluna regular. Ambas as estruturas são úteis e a escolha depende do que você precisa fazer em seguida.
+
+### Rotacionando um Array com `aperm()`
+
+`aperm()` (array permute) reordena as dimensões de um array.
+
+```{r rotacionando_array}
+subarray_2_alunos <- dados_array[1:2, , ] 
+
+# perm = c(2, 3, 1): A 2ª dimensão (Questao) vira a 1ª, a 3ª (Prova) vira a 2ª, etc.
+array_permutado <- aperm(subarray_2_alunos, perm = c(2, 3, 1))
+
+cat("\nDimensões do array_permutado (Questao, Prova, Aluno):\n")
+print(dim(array_permutado))
+cat("\nDados do primeiro aluno após permutação (Questões x Provas):\n")
+print(array_permutado[, , 1]) 
+```
+
+### Operações Aritméticas
+
+Operações aritméticas como `+`, `*`, etc., ocorrem elemento a elemento.
+
+```{r array_aritmetica}
+array_a <- array(1:6, dim = c(2, 3))
+array_b <- array(7:12, dim = c(2, 3))
+
+# Soma elemento a elemento
+cat("\nA + B:\n")
+print(array_a + array_b)
+```
+
+### Exemplo Adicional: Multiplicação de Matrizes
+
+Para arrays 2D (matrizes), a multiplicação de matrizes (álgebra linear) é uma operação comum que **não** é elemento a elemento. Para isso, usamos o operador `%*%`.
+
+```{r multiplicacao_matrizes}
+matriz_a <- array(1:6, dim = c(2, 3)) # Matriz 2x3
+matriz_b <- array(1:6, dim = c(3, 2)) # Matriz 3x2
+
+cat("Matriz A (2x3):\n")
+print(matriz_a)
+cat("\nMatriz B (3x2):\n")
+print(matriz_b)
+
+# Para multiplicar, o número de colunas da 1ª matriz deve ser igual
+# ao número de linhas da 2ª. O resultado é uma matriz 2x2.
+resultado_mult <- matriz_a %*% matriz_b
+cat("\nResultado da Multiplicação de Matrizes (A %*% B):\n")
+print(resultado_mult)
+```
+
+### Exemplo Estatístico: Produto Externo e a Matriz de Covariância
+
+Uma operação tensorial particularmente útil em estatística é o **produto externo**, calculado em R com o operador `%o%`. Ele nos permite construir estruturas multidimensionais a partir de vetores. Um exemplo clássico é a construção da matriz de covariância.
+
+A contribuição de uma **única observação** para a matriz de covariância é o produto externo do seu vetor de desvios da média.
+
+```{r produto_externo_covariancia}
+# 1. Simular dados de duas variáveis
+set.seed(123)
+x <- rnorm(10, mean = 5)
+y <- rnorm(10, mean = 10)
+
+# 2. Calcular os vetores de desvios da média
+desvios_x <- x - mean(x)
+desvios_y <- y - mean(y)
+
+# 3. Pegar o vetor de desvios para a PRIMEIRA observação
+desvios_obs1 <- c(dx = desvios_x[1], dy = desvios_y[1])
+cat("Vetor de desvios para a primeira observação:\n")
+print(desvios_obs1)
+
+# 4. Calcular o produto externo (uma matriz 2x2)
+contribuicao_cov_obs1 <- desvios_obs1 %o% desvios_obs1
+cat("\nContribuição da primeira observação para a matriz de covariância:\n")
+print(contribuicao_cov_obs1)
+
+# 5. Interpretação
+cat("\nO elemento [1,1] é a contribuição para a variância de X (dx*dx).\n")
+cat("O elemento [2,2] é a contribuição para a variância de Y (dy*dy).\n")
+cat("Os elementos fora da diagonal [1,2] e [2,1] são a contribuição para a covariância (dx*dy).\n")
+
+# Se somarmos essas matrizes para todas as observações e dividirmos por n-1,
+# obtemos a matriz de covariância completa.
+```
+
+### Exemplo Avançado: Produto Tensorial e Co-assimetria
+
+Podemos generalizar a ideia da covariância para momentos de ordem superior. A **co-assimetria (coskewness)** é um tensor de 3ª ordem que mede a relação de assimetria simultânea entre *trios* de variáveis, sendo útil em áreas como finanças para analisar riscos de movimentos extremos.
+
+A contribuição de uma única observação para este tensor pode ser calculada com produtos externos aninhados.
+
+```{r produto_externo_coskewness}
+# 1. Simular desvios de uma única observação para 3 variáveis
+desvios_obs1 <- c(dx = 1.5, dy = -0.5, dz = 2.0)
+
+# 2. Calcular o tensor de co-assimetria para esta observação
+# A função outer(vetor, matriz) cria um array 3D.
+tensor_coskew_obs1 <- outer(desvios_obs1, desvios_obs1 %o% desvios_obs1)
+
+# 3. Nomear as dimensões para clareza
+dimnames(tensor_coskew_obs1) <- list(
+  names(desvios_obs1), 
+  names(desvios_obs1), 
+  names(desvios_obs1)
+)
+    
+cat("Tensor de Co-assimetria para uma observação (array 3x3x3):\n")
+print(tensor_coskew_obs1)
+
+# 4. Interpretação
+cat("\nO elemento ['dx','dx','dx'] está relacionado à assimetria (skewness) da variável X.\n")
+cat("O elemento ['dx','dy','dz'] mede a co-assimetria entre as três variáveis.\n")
+```
+
+## Exercício em Aula
+
+Considere os seguintes dados de vendas trimestrais. Cada linha representa as vendas de um produto em uma região para um trimestre específico.
+
+```{r dados_exercicio_tidy}
+# Dados de vendas em formato "tidy" (longo)
+dados_vendas_exercicio <- c(10,12,15,13, 20,22,25,23, 30,32,35,33, 40,42,45,43, 50,52,55,53, 60,62,65,63)
+dados_vendas_tidy <- tibble(
+  regiao = rep(c("Norte", "Sudeste", "Sul"), each = 8),
+  produto = rep(rep(c("Produto Alfa", "Produto Beta"), each = 4), times = 3),
+  trimestre = rep(c("Trim1", "Trim2", "Trim3", "Trim4"), times = 6),
+  vendas = dados_vendas_exercicio
+)
+
+cat("Dados de vendas em formato tidy:\n")
+print(dados_vendas_tidy)
+```
+
+**Instruções:**
+
+1.  **Preparação dos Dados:**
+    * A função `array()` preenche os dados variando o primeiro índice mais rapidamente. Para criar um array com dimensões `(Região, Produto, Trimestre)`, precisamos ordenar nossos dados `dados_vendas_tidy` exatamente nessa ordem.
+    * Use `dplyr::arrange()` para ordenar o tibble por `regiao`, depois por `produto`, e finalmente por `trimestre`.
+    * Extraia a coluna `vendas` ordenada para um novo vetor chamado `vendas_ordenadas`.
+
+2.  **Criação e Nomeação:**
+    * Crie um array 3D chamado `array_vendas` com dimensões 3x2x4 (3 Regiões, 2 Produtos, 4 Trimestres) usando o vetor `vendas_ordenadas`.
+    * Atribua os nomes corretos às dimensões usando o argumento `dimnames` dentro da função `array()`.
+    * Imprima o array criado para verificar se as vendas correspondem à tabela original.
+
+3.  **Subsetting:**
+    * Extraia e imprima todas as vendas do "Produto Beta" na região "Sudeste".
+    * Extraia e imprima os dados do "Trim4" para todas as regiões e produtos.
+
+4.  **Cálculos com `apply()`:**
+    * Calcule a soma total de vendas para cada "Produto".
+    * Calcule a média de vendas por "Trimestre" para a região "Norte".
+
+```{r exercicio_solucao_espaco, eval=TRUE, echo=TRUE}
+# Espaço para a solução do exercício
+
+# 1. Preparação dos Dados
+# vendas_ordenadas <- ...
+
+# 2. Criação e Nomeação
+# array_vendas <- ...
+# cat("1. Array de Vendas Criado:\n")
+# print(array_vendas)
+
+# 3. Subsetting
+# cat("\n2.a Vendas do Produto Beta na região Sudeste:\n")
+# print(...)
+# cat("\n2.b Vendas do Trim4:\n")
+# print(...)
+
+# 4. Cálculos com apply()
+# cat("\n3.a Soma total de vendas por Produto:\n")
+# print(...)
+# cat("\n3.b Média de vendas por Trimestre para a Região Norte:\n")
+# print(...)
+
+```

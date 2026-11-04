@@ -1,0 +1,417 @@
+---
+title: "Lendo Microdados do IBGE: O Método Manual"
+subtitle: "Trabalhando com Dados do Censo 2010 (DF)"
+author: "IA Gemini instruída por dmp"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    scrollable: true
+    self-contained: true
+    embed-resources: true
+    chalkboard: false
+# format:
+#   html:
+#     embed-resources: true
+#     toc: true
+#     toc-depth: 2
+lang: pt
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, error = TRUE)
+# Criar diretórios para que o script não falhe se as pastas não existirem.
+# Em um projeto real, essas pastas seriam criadas manualmente ou pelo script de download.
+if (!dir.exists("dados")) dir.create("dados")
+if (!dir.exists("Documentacao/Layout")) dir.create("Documentacao/Layout", recursive = TRUE)
+```
+
+## Objetivo da Aula
+
+Na última aula, aprendemos a importar dados de arquivos "limpos" (`readr`).
+
+**O Desafio de Hoje:** Como trabalhar com dados públicos brutos, como os microdados de um Censo do IBGE?
+
+**Nosso Plano:**
+
+Hoje, vamos aprender o fluxo de trabalho "manual" para ler esses dados. Este processo envolve múltiplos passos e nos dá uma apreciação profunda das ferramentas que o automatizam.
+
+1.  Baixar e descompactar os dados.
+2.  Interpretar o dicionário de dados (o "mapa" dos dados).
+3.  Ler um arquivo de formato de largura fixa (Fixed-Width Format - FWF).
+4.  Realizar o pós-processamento para corrigir e formatar os dados.
+
+Este processo irá nos motivar para uma aula futura, onde veremos uma maneira muito mais simples de acessar esses mesmos dados.
+
+---
+
+## 0. Lendo Arquivos de Largura Fixa (Fixed-Width Files) com `read_fwf()`
+
+Além de arquivos delimitados como CSV, um formato comum para microdados mais antigos é o **arquivo de largura fixa** (`.fwf`). Nestes arquivos, não há um delimitador; as colunas são definidas pela sua posição (largura) em cada linha.
+
+A leitura destes arquivos pode ser desafiadora, pois exige que saibamos exatamente onde cada variável começa e termina. O pacote `readr` oferece a função `read_fwf()` para facilitar este processo.
+
+### A Função `read_fwf()`
+
+A sintaxe principal é: `read_fwf(file, col_positions, ...)`
+
+* `file`: O caminho para o arquivo ou o texto dos dados.
+* `col_positions`: A parte mais importante. Aqui especificamos como as colunas são definidas. Usamos funções auxiliares para isso.
+
+### Especificando a Posição das Colunas
+
+Existem quatro maneiras principais de definir as posições das colunas:
+
+1.  `fwf_empty(file)`: Tenta adivinhar as posições das colunas com base em colunas vazias. É útil para exploração inicial.
+2.  `fwf_widths(larguras, nomes_colunas)`: Você fornece um vetor numérico com a **largura** de cada coluna. Esta é uma abordagem muito comum quando o dicionário de dados especifica o tamanho de cada campo.
+3.  `fwf_positions(inicios, fins, nomes_colunas)`: Você fornece vetores com as posições de **início** e **fim** de cada coluna.
+4.  `fwf_cols(...)`: Uma sintaxe mais explícita onde você nomeia cada coluna e especifica sua largura ou posição.
+
+### Exemplo Prático
+
+O pacote `readr` inclui um arquivo de exemplo `fwf-sample.txt`. Vamos primeiro visualizar seu conteúdo.
+
+```{r}
+#| echo: true
+# Carregar o readr (parte do tidyverse)
+library(readr)
+
+# Caminho para o arquivo de exemplo
+fwf_exemplo <- readr_example("fwf-sample.txt")
+
+# Visualizar o conteúdo do arquivo de texto
+writeLines(read_lines(fwf_exemplo))
+```
+
+Podemos ver que não há delimitadores. A estrutura parece ser: nome (longo), estado (curto) e um código numérico.
+
+#### Leitura com `fwf_widths()`
+
+Suponha que o dicionário de dados nos diga que as larguras são 20, 10 e 12 caracteres.
+
+```{r}
+#| echo: true
+# Leitura especificando as larguras das colunas
+read_fwf(
+  fwf_exemplo,
+  col_positions = fwf_widths(c(20, 10, 12), c("nome", "estado", "cpf_ficticio"))
+)
+```
+
+#### Leitura com `fwf_positions()`
+
+Alternativamente, se o dicionário nos disser que o nome vai da posição 1 à 20, o estado da 21 à 30 e o CPF da 31 à 42.
+
+```{r}
+#| echo: true
+# Leitura especificando as posições de início e fim
+read_fwf(
+  fwf_exemplo,
+  col_positions = fwf_positions(
+    start = c(1, 21, 31),
+    end = c(20, 30, 42),
+    col_names = c("nome", "estado", "cpf_ficticio")
+  )
+)
+```
+
+---
+
+## 1. A Fonte de Dados: Censo 2010 (DF)
+
+Usaremos os microdados da amostra do Censo Demográfico de 2010 para o Distrito Federal. Precisaremos de dois arquivos `.zip` do FTP do IBGE.
+
+**Arquivo de Dados:**
+
+* **Conteúdo:** Os dados brutos em formato `.txt`.
+* **Link:** [https://ftp.ibge.gov.br/Censos/Censo_Demografico_2010/Resultados_Gerais_da_Amostra/Microdados/DF.zip](https://ftp.ibge.gov.br/Censos/Censo_Demografico_2010/Resultados_Gerais_da_Amostra/Microdados/DF.zip)
+
+**Arquivo de Documentação:**
+
+* **Conteúdo:** A documentação, incluindo o dicionário de variáveis (layout) em formato `.xls`.
+* **Link:** [https://ftp.ibge.gov.br/Censos/Censo_Demografico_2010/Resultados_Gerais_da_Amostra/Microdados/Documentacao.zip](https://ftp.ibge.gov.br/Censos/Censo_Demografico_2010/Resultados_Gerais_da_Amostra/Microdados/Documentacao.zip)
+
+---
+
+## 2. Download e Descompactação
+
+Primeiro, precisamos baixar os arquivos e descompactá-los em nosso projeto. Vamos organizar os arquivos em pastas `dados/` e `Documentacao/`.
+
+```{r download_unzip, eval=FALSE}
+# Este chunk é para demonstração e não será executado durante a renderização
+# para evitar downloads repetidos. Os alunos devem executá-lo em seus consoles.
+
+# --- Download do arquivo de dados ---
+url_censo_df <- "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2010/Resultados_Gerais_da_Amostra/Microdados/DF.zip"
+dest_zip_dados <- "dados/DF.zip"
+download.file(url_censo_df, destfile = dest_zip_dados, mode = "wb")
+
+# --- Download do arquivo de documentação ---
+url_censo_doc <- "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2010/Resultados_Gerais_da_Amostra/Microdados/Documentacao.zip"
+dest_zip_doc <- "Documentacao.zip"
+download.file(url_censo_doc, destfile = dest_zip_doc, mode = "wb")
+
+# --- Ação Manual Necessária ---
+# Após rodar os comandos acima, por favor, descompacte manualmente os arquivos:
+# 1. Descompacte "DF.zip" dentro da pasta "dados/". 
+#    Isso deve criar uma pasta "DF" dentro de "dados" (dados/DF/).
+# 2. Descompacte "Documentacao.zip" na pasta principal do seu projeto.
+#    Isso criará uma pasta de documentação. Mova o arquivo de Layout para a pasta correta.
+#    O importante é ter o arquivo de layout no caminho esperado. Isso pode exigir
+#    a renomeação da pasta.
+```
+
+Após este passo, teremos o arquivo `Amostra_Domicilios_53.txt` em `dados/DF/` e `Layout_microdados_Amostra.xls` em `Documentacao/Layout/`.
+
+---
+
+## 3. Entendendo o Dicionário (Layout)
+
+O arquivo de dicionário (`Layout_microdados_Amostra.xls`) é nosso "mapa". Vamos ler a aba "DOMI" (Domicílios) e selecionar as colunas de interesse. (Teremos uma aula futura
+sobre leitura de planilhas.)
+
+```{r ler_dicionario}
+library(readxl)
+library(tidyverse)
+
+# Caminho para o arquivo de layout
+layout_path <- "Documentacao/Layout/Layout_microdados_Amostra.xls"
+
+# Ler a aba "DOMI", pulando a primeira linha que é um título mesclado
+if (file.exists(layout_path)) {
+  layout_domicilios_raw <- read_excel(layout_path, sheet = "DOMI", skip = 1)
+  
+  # Selecionar e renomear as colunas de interesse para facilitar o uso
+  layout_domicilios <- layout_domicilios_raw |>
+    select(
+      VAR, 
+      NOME,
+      INICIO = `POSIÇÃO INICIAL`,
+      FIM = `POSIÇÃO FINAL`,
+      INT, 
+      DEC,
+      TIPO
+    ) |>
+    mutate(TIPO = str_replace(TIPO,"\n", ""))
+  
+  glimpse(layout_domicilios)
+} else {
+  cat("Arquivo de layout não encontrado em:", layout_path, "\nCertifique-se de que o arquivo foi baixado e movido para a pasta correta.")
+  layout_domicilios <- tibble() # Criar um tibble vazio para evitar erros
+}
+```
+
+---
+
+### Colunas Importantes no Dicionário
+
+Para ler nossos dados, as colunas mais importantes do `layout_domicilios` são:
+
+* `VAR`: O nome da variável (ex: `V0001`, `V0002`). Usaremos como nomes das colunas.
+* `INICIO` e `FIM`: Onde cada variável começa e termina em cada linha do arquivo de texto.
+* `INT` e `DEC`: O número de dígitos inteiros e decimais para variáveis numéricas (`TIPO == 'N'`). Precisaremos disso para corrigir valores (ex: um valor `1234` com `DEC=2` na verdade é `12.34`).
+* `NOME`: Descreve a variável e, para variáveis categóricas, contém os códigos e seus significados (ex: `1 = Urbana`, `2 = Rural`).
+* `TIPO`: Indica o tipo da variável: `N` para Numérica, `C` para Categórica, `A` para Alfanumérica.
+
+---
+
+## 4. Preparando para a Leitura FWF
+
+Agora, vamos usar as informações do dicionário para criar os argumentos necessários para `readr::read_fwf()`.
+
+```{r preparar_leitura_fwf, eval = (nrow(layout_domicilios) > 0)}
+if (nrow(layout_domicilios) > 0) {
+  # Nomes das colunas vêm da coluna 'VAR' do layout
+  col_names <- layout_domicilios$VAR
+
+  # Posições das colunas (início e fim)
+  col_positions <- readr::fwf_positions(
+    start = layout_domicilios$INICIO,
+    end = layout_domicilios$FIM,
+    col_names = col_names
+  )
+  
+  cat("Nomes das primeiras 10 colunas:\n")
+  print(head(col_names, 10))
+  
+  cat("\nPosições das primeiras 5 colunas:\n")
+  print(head(col_positions))
+}
+```
+
+---
+
+## 5. Lendo o Arquivo de Largura Fixa (FWF)
+
+Com os nomes e posições definidos, podemos ler o arquivo de dados `Amostra_Domicilios_53.txt`.
+
+```{r ler_arquivo_fwf, eval = (nrow(layout_domicilios) > 0)}
+# Caminho para o arquivo de dados dos domicílios
+dados_path <- "dados/DF/Amostra_Domicilios_53.txt"
+
+if (file.exists(dados_path)) {
+  # Ler o arquivo usando read_fwf com as posições e nomes que definimos
+  domicilios_raw <- read_fwf(
+    dados_path,
+    col_positions = col_positions,
+    col_types = cols(.default = "c") # Ler tudo como caractere inicialmente
+  )
+  
+  cat("Dimensões dos dados brutos importados:\n")
+  print(dim(domicilios_raw))
+  
+  cat("\nVisualização dos dados brutos (primeiras linhas e colunas):\n")
+  glimpse(domicilios_raw |> select(1:6))
+} else {
+  cat("Arquivo de dados não encontrado em:", dados_path)
+  domicilios_raw <- tibble()
+}
+```
+
+*Lemos tudo como caractere (`col_types = cols(.default = "c")`) para evitar erros de parsing iniciais. Faremos a conversão e limpeza nos próximos passos.*
+
+---
+
+## 6. Pós-Processamento: Corrigindo Tipos de Dados
+
+Os dados brutos estão todos como texto. Precisamos:
+
+1.  Converter colunas numéricas para o tipo `numeric`.
+2.  Ajustar os valores numéricos usando as informações de casas decimais (`DEC`).
+3.  Converter colunas categóricas (`TIPO == 'C'`, e o caso especial `V0001` que é `TIPO == 'A'`) para `factor` com os rótulos corretos extraídos da coluna `NOME`.
+
+### 6.1 Corrigindo Variáveis Numéricas
+
+```{r corrigir_numericos, eval = (exists("domicilios_raw") && nrow(domicilios_raw) > 0)}
+if (exists("domicilios_raw") && nrow(domicilios_raw) > 0) {
+  # Identificar variáveis numéricas (aquelas com TIPO == 'N')
+  vars_numericas <- layout_domicilios |>
+    filter(TIPO == 'N') |>
+    pull(VAR) # Puxa apenas a coluna VAR como um vetor
+
+  domicilios_proc <- domicilios_raw |>
+    mutate(across(all_of(vars_numericas), as.numeric)) # Converte para numérico
+  
+domicilios_proc <- domicilios_proc |>
+  mutate(
+    # Aplica a seguinte função anônima a todas as 
+    # colunas em 'vars_numericas'
+    across(all_of(vars_numericas), ~{
+      
+      # 1. Obtém o nome da coluna atual que está a ser processada
+      var_atual <- cur_column()
+      
+      # 2. Consulta o número de decimais para a variável atual
+      decimais <- layout_domicilios |> 
+        filter(VAR == var_atual) |> 
+        pull(DEC)
+      
+      # 3. Aplica a lógica condicional de forma vetorizada com if_else()
+      # Se a condição for cumprida, transforma o dado (.x).
+      # Se não, mantém o dado original (.x).
+      if (!is.na(decimais) && decimais > 0) {
+        .x / (10^decimais)
+      } else {
+        .x
+      }
+    })
+  )  
+  cat("Exemplo de variável numérica corrigida (V2011 - Valor do Aluguel (em Reais)):\n")
+  print(summary(domicilios_proc$V2011))
+}
+```
+
+---
+
+### 6.2 Criando Fatores (Factors)
+
+Para variáveis categóricas, os códigos e rótulos estão na coluna `NOME`. Ex: "SITUAÇÃO DO DOMICÍLIO:\n1- URBANA\n2- RURAL". Usaremos `tidyr::extract()` para extrair essa informação de forma robusta e criar fatores.
+
+```{r criar_fatores, eval = (exists("domicilios_proc") && nrow(domicilios_proc) > 0)}
+# --- Slide 6.2: Criando Fatores (Factors) - Alternative with forcats ---
+
+if (exists("domicilios_proc") && nrow(domicilios_proc) > 0) {
+  
+  # --- Step 1: Parsear as informações de rótulos do layout (sem alterações) ---
+  rotulos_df <- layout_domicilios |>
+    filter((TIPO == 'C' | VAR == 'V0001') & 
+             !is.na(NOME)) |>
+    select(VAR, NOME) |>
+    separate_longer_delim(NOME, delim = "\n") |>
+    filter(str_detect(NOME, regex("^\\s*\\d+\\s*-"))) |>
+    extract(
+      col = NOME,
+      into = c("codigo", "rotulo"),
+      regex = "^\\s*(\\d+)\\s*-\\s*(.*)$",
+      remove = FALSE
+    ) |>
+    mutate(rotulo = trimws(rotulo))
+
+  # --- Steps 2 & 3: Loop para Recodificar com fct_recode() ---
+  
+  # Obter a lista de variáveis categóricas que vamos converter
+  vars_para_converter <- unique(rotulos_df$VAR)
+  
+  # Começar com os dados processados numericamente
+  domicilios_final <- domicilios_proc
+
+  # 1. Dividir o data frame de rótulos por variável 
+  #    e criar os mapas de uma só vez
+  mapas_de_recodificacao <- rotulos_df |>
+    # Filtra apenas as variáveis que nos interessam
+    filter(VAR %in% vars_para_converter) |>
+    # Divide o tibble numa lista de tibbles, um para cada valor de 'VAR'
+    split(~ VAR) |>
+    # Itera sobre cada tibble na lista e cria o vetor nomeado para recodificação
+    map(~ setNames(.x$codigo, .x$rotulo))
+  
+  # 2. Imprimir o mapa para V0001 para fins de ensino (agora muito mais simples)
+  cat("Mapa de recodificação para V0201 (DOMICÍLIO, CONDIÇÃO DE OCUPAÇÃO:\n")
+  print(mapas_de_recodificacao$V0201)
+  
+  domicilios_final <- domicilios_final |>
+    mutate(
+      # Aplica a função a todas as colunas em 'vars_para_converter'
+      across(all_of(vars_para_converter), ~ {
+        # Obtém o nome da coluna atual
+        var_atual <- cur_column()
+        # Obtém o mapa de recodificação correspondente da nossa lista
+        mapa_atual <- mapas_de_recodificacao[[var_atual]]
+        # 1. Preparar a lista de argumentos para do.call()
+        # O primeiro argumento é o vetor a ser recodificado (.x)
+        # O resto são as regras do nosso mapa.
+        argumentos_para_recode <- 
+          c(list(as.character(.x)), mapa_atual)
+        # 2. Chamar fct_recode() usando do.call()
+        do.call(fct_recode, argumentos_para_recode)
+      })
+    )
+  
+  cat("\nExemplo de variável convertida para fator (V0201 - DOMICÍLIO, CONDIÇÃO DE OCUPAÇÃO):\n")
+  print(table(domicilios_final$V0201))
+}
+```
+
+---
+
+## 7. Conclusão
+
+Ler microdados brutos do IBGE manualmente é um processo multi-etapas:
+
+1.  **Download e Descompactação:** Obter os arquivos do FTP.
+2.  **Leitura do Dicionário:** Usar `readxl` para entender a estrutura dos dados.
+3.  **Preparação:** Processar o dicionário para criar os argumentos para a leitura.
+4.  **Leitura do FWF:** Usar `read_fwf` com as especificações corretas.
+5.  **Pós-processamento:** Corrigir tipos numéricos e codificar variáveis categóricas como fatores.
+
+Este trabalho, embora fundamental para entender como os dados são estruturados, é repetitivo e propenso a erros.
+
+**Numa aula futura...**
+
+Veremos como o pacote `basedosdados` nos permite realizar todos esses passos em apenas um ou dois comandos, consultando os dados diretamente da nuvem, já limpos e padronizados.

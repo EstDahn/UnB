@@ -1,0 +1,216 @@
+---
+title: "Programando com Funções no Tidyverse"
+subtitle: "Computação em Estatística II"
+author: "Prof. Donald M. Pianto"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-fold: false
+execute:
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Nas últimas aulas, aprendemos a criar nossas próprias funções e a usar *functionals* como `purrr::map()` para aplicá-las a múltiplos inputs. Esta é uma combinação poderosa para automatizar tarefas repetitivas.
+
+Um passo natural é tentar encapsular um pipeline do `dplyr` dentro de uma função. Por exemplo, como poderíamos criar uma função que agrupa um data frame por uma coluna especificada pelo usuário e depois calcula uma estatística?
+
+Hoje, vamos descobrir por que essa tarefa, que parece simples, introduz um novo desafio em R e como resolvê-lo. Dominar esta técnica irá desbloquear um novo nível de poder de programação no `tidyverse`.
+
+```{r setup}
+library(dplyr)
+library(rlang)
+```
+
+---
+
+## 1. O Problema: Por que Nossas Funções com `dplyr` Quebram?
+
+Vamos começar com um objetivo simples: criar uma função que agrupa os dados de `starwars` por uma coluna e calcula a média da massa.
+
+Intuitivamente, poderíamos tentar escrever algo assim:
+
+```{r, error=TRUE}
+# Tentativa 1: Uma função que parece lógica, mas falha
+media_por_grupo <- function(df, coluna_de_agrupamento) {
+  df |>
+    group_by(coluna_de_agrupamento) |>
+    summarise(media_massa = mean(mass, na.rm = TRUE))
+}
+
+# Vamos tentar usar a função
+# media_por_grupo(starwars, species)
+```
+
+Este código falha com uma mensagem de erro. Por quê?
+
+A razão está na **Avaliação Não-Padrão** (Non-Standard Evaluation - NSE). Funções do `dplyr` como `group_by`, `summarise`, `mutate`, etc., são especiais. Elas não avaliam seus argumentos da maneira usual do R.
+
+* **R Padrão:** Quando você passa `species` para uma função normal, o R procura por um objeto chamado `species` no ambiente e passa seu valor.
+* **`dplyr` (NSE):** Quando você passa `species` para `group_by()`, ele não procura o *valor* de `species`. Em vez disso, ele **captura a expressão** `species` e a interpreta no contexto do data frame.
+
+Dentro da nossa função `media_por_grupo`, o `dplyr` recebe o argumento `coluna_de_agrupamento`. Ele tenta encontrar uma coluna com o nome literal "coluna_de_agrupamento" dentro do data frame, não o que o usuário passou (que era `species`).
+
+Como podemos dizer à nossa função para "desembrulhar" o argumento e passar a expressão correta para o `dplyr`? A resposta é **metaprogramação**.
+
+---
+
+## 2. A Solução: Capturar e Injetar Código
+
+Para fazer nossa função funcionar, precisamos de um processo de duas etapas, que forma a base da *tidy evaluation*.
+
+### Passo A: Capturar a Expressão do Usuário
+
+Primeiro, precisamos dizer à nossa função para capturar o que o usuário digitou sem avaliá-lo imediatamente. A ferramenta para isso no pacote `rlang` é `enquo()`. Ela "encapsula" a expressão em uma estrutura especial chamada *quosure*, que guarda tanto a expressão quanto o ambiente onde ela foi criada.
+
+```{r}
+minha_funcao_captura <- function(argumento) {
+  rlang::enquo(argumento)
+}
+
+# A expressão `homeworld` é capturada, não avaliada.
+capturado <- minha_funcao_captura(homeworld)
+print(capturado)
+```
+
+### Passo B: Injetar a Expressão Capturada
+
+Depois de capturar a expressão, precisamos de uma forma de injetá-la no `group_by()`, forçando o `dplyr` a avaliar a expressão que capturamos. A ferramenta para isso é o operador **`!!`** (lê-se "bang-bang").
+
+O `!!` funciona como um "desembrulhador". Ele diz a uma função do `dplyr`: "Não olhe para esta variável, olhe para a expressão que está *dentro* dela".
+
+### A Primeira Solução Funcional (O Jeito Antigo)
+
+Vamos combinar `enquo()` e `!!` para consertar nossa função:
+
+```{r}
+media_por_grupo_v1 <- function(df, coluna_de_agrupamento) {
+  # Passo A: Capturar a expressão do usuário
+  coluna_capturada <- rlang::enquo(coluna_de_agrupamento)
+  
+  df |>
+    group_by(!!coluna_capturada) |> # Passo B: Injetar com !!
+    summarise(media_massa = mean(mass, na.rm = TRUE))
+}
+
+# Agora funciona!
+media_por_grupo_v1(starwars, species)
+```
+
+Este padrão (`enquo()` + `!!`) foi a forma padrão de programar com `dplyr` por anos. Vocês encontrarão muito código assim no Stack Overflow, em pacotes e em projetos antigos. É crucial saber reconhecê-lo.
+
+---
+
+## 3. A Ferramenta Moderna: O Operador `{{{ }}}`
+
+O padrão de capturar e injetar é tão comum que o `tidyverse` criou um atalho que faz as duas coisas ao mesmo tempo: o operador `{{{ }}}` (lê-se "curly-curly" ou "abraço").
+
+O operador `{{{ }}}` **substitui** a combinação de `enquo()` na função e `!!` na chamada do `dplyr`. Ele captura e injeta o argumento em um único passo.
+
+### A Solução Final e Elegante
+
+Vamos reescrever nossa função usando a abordagem moderna. Ela é mais limpa, mais curta e mais fácil de ler.
+
+```{r}
+media_por_grupo_moderna <- function(df, coluna_de_agrupamento) {
+  df |>
+    group_by({{ coluna_de_agrupamento }}) |>
+    summarise(media_massa = mean(mass, na.rm = TRUE))
+}
+
+# Funciona perfeitamente
+media_por_grupo_moderna(starwars, homeworld)
+```
+
+Esta é a abordagem que vocês devem usar ao escrever suas próprias funções. Ela é a melhor prática atual.
+
+---
+
+## 4. Guia de Referência Prática
+
+O exemplo principal cobriu o caso mais comum, mas há outras situações que vocês encontrarão.
+
+### Passando um vetor de caracteres com nomes de colunas
+
+E se o nome da coluna que você quer usar estiver em uma string (um vetor de caracteres)? Isso é comum em laços `for` ou ao trabalhar com saídas de outras funções.
+
+Neste caso, o `{{{ }}}` não funciona, pois ele espera uma expressão "nua". A solução é usar o pronome `.data`.
+
+O pronome `.data` é um objeto especial que se refere ao data frame atual dentro de um verbo `dplyr`. Podemos usar o subsetting padrão `[[ ]]` com ele.
+
+```{r}
+# Suponha que temos um vetor de caracteres com nomes de colunas
+colunas_para_agrupar <- c("species", "homeworld")
+
+# Usamos um laço para criar um sumário para cada coluna
+for (col in colunas_para_agrupar) {
+  resultado <- starwars |>
+    group_by(.data[[col]]) |> # Usamos .data[[...]]
+    summarise(n = n())
+  
+  print(resultado)
+}
+```
+
+### Criando nomes de colunas dinamicamente
+
+Às vezes, queremos que o nome da nova coluna em `summarise` ou `mutate` dependa do nome da variável de entrada. Para isso, usamos o operador `:=` (conhecido como "morsa") em vez de `=`. Isso nos permite usar a sintaxe de "cola" (glue) à esquerda.
+
+```{r}
+# Função que calcula a média de uma coluna e nomeia a saída dinamicamente
+media_com_nome_dinamico <- function(df, coluna) {
+  df |>
+    summarise("media_{{coluna}}" := mean({{ coluna }}, na.rm = TRUE))
+}
+
+mtcars |> media_com_nome_dinamico(mpg)
+mtcars |> media_com_nome_dinamico(disp)
+```
+
+### Passando múltiplas colunas com `...`
+
+Se você quer que sua função aceite um número arbitrário de colunas (como `group_by` ou `select` fazem), use o argumento especial `...` e passe-o diretamente para o verbo do `dplyr`.
+
+```{r}
+# Agrupa por qualquer número de colunas
+agrupar_e_contar <- function(df, ...) {
+  df |>
+    group_by(...) |>
+    summarise(n = n())
+}
+
+starwars |> agrupar_e_contar(species)
+starwars |> agrupar_e_contar(species, gender, homeworld)
+```
+
+### Selecionando colunas (Tidy Select)
+
+A mesma lógica se aplica a funções que usam "seleção tidy" (`select`, `relocate`, `across`).
+
+-   **Passando um argumento:** use `{{{ }}}`.
+-   **Passando um vetor de caracteres:** use `all_of()` ou `any_of()`.
+
+```{r}
+# Função que seleciona colunas especificadas pelo usuário
+minha_selecao <- function(df, colunas) {
+  df |> select({{ colunas }})
+}
+
+# Funciona com nomes de colunas
+mtcars |> minha_selecao(c(mpg, cyl, disp)) |> head(2)
+
+# Funciona com helpers de seleção
+mtcars |> minha_selecao(starts_with("d")) |> head(2)
+
+# Para usar com um vetor de caracteres
+cols_char <- c("mpg", "disp")
+mtcars |> select(all_of(cols_char)) |> head(2)
+```

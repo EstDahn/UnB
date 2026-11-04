@@ -1,0 +1,223 @@
+---
+title: "LAB 04"
+author: "Daniel Gonçalves Gomes Ferreira - 251019566"
+output: html_document
+---
+
+## PARTE 1
+
+```{r message=FALSE}
+library( tidyverse )
+def_area <- read.csv( "def_area_1988_2022.csv")
+fires_amz <- read.csv( "inpe_brazilian_amazon_fires_1999_2022.csv", check.names = F, sep = ";" )
+phenomenon <- read.csv( "el_nino_la_nina_1999_2022.csv", sep = ";" )
+br_presidents <- read.csv( "br_presidents.csv", sep = ";" )
+```
+
+#### EXERCÍCIO 1:
+
+```{r}
+def_amz <- def_area %>% 
+  pivot_wider(names_from = state, values_from = area)
+
+glimpse(def_amz)
+```
+
+#### EXERCÍCIO 2:
+
+```{r}
+
+#def_amz$deforestation
+def_area2 <- def_area %>% 
+  group_by(year) %>%  mutate(deforestation = sum(area))
+
+def_area2
+
+```
+
+#### EXERCÍCIO 3:
+
+```{r}
+
+def_new_2022 <- def_area %>% 
+  filter(year == 2022)
+
+  
+def_new_2022$ref <- "complete estimate"
+def_new_2022$area <- (def_new_2022$area +1/11)
+
+#def_new_2022
+
+
+def_area[def_area$year==2022,] <- def_new_2022
+
+#def_area[def_area$year==2022,]
+
+def_amz <- def_area %>% 
+  pivot_wider(names_from = state, values_from = area)
+  def_amz$deforestation <- sum(def_area$area)
+
+tail(def_amz)
+
+```
+
+
+#### EXERCÍCIO 4:
+
+```{r}
+head(select(fires_amz, year, total))
+
+#tambpem é possível usando o names
+#names(fires_amz)[names(fires_amz) == "total"] <- "fire"
+fires_amz <- fires_amz %>% 
+rename(fire = total)
+
+head(select(fires_amz, year, fire))
+
+
+
+```
+
+#### EXERCÍCIO 5:
+
+```{r}
+
+degradation <- def_area2 %>% 
+  select(year, deforestation) 
+
+degradation <- degradation %>%
+  left_join(fires_amz, by = "year") %>%
+  left_join(phenomenon , by = "year") %>%
+  left_join(br_presidents, by = "year")
+
+degradation
+```
+
+#### EXERCÍCIO 6:
+
+```{r}
+
+degradation %>% 
+  group_by(president) %>% 
+  summarise( n = mean(deforestation)) %>% 
+  arrange(desc(n))
+
+
+```
+ Com excessão a Dilma, todos os presidente a partir de 2000 tiveram um alto índice de desmatamento
+
+## Parte 2
+
+#### EXERCÍCIO 7:
+
+```{r}
+
+degradation %>%
+  ggplot( aes( year, deforestation ) ) +
+  geom_line() +
+  geom_vline( xintercept = c(1990.33, 1993, 1995, 2003, 2004, 2011, 2016.67, 2019),
+              color = "magenta", linetype = 3 ) +
+  annotate( "text",
+            x = c(1991.3, 1993.9, 1995.8, 2003.8, 2011.9, 2017.7, 2020.4),
+            y = 31000, 
+            label = c("Collor", "Itamar", "FHC", "Lula", "Dilma", "Temer", "Bolsonaro"),
+            size = 2) +
+   geom_vline( xintercept = c(2004),  color = "orange", linetype = 1 ) +
+  annotate( "text",
+            x = c(2004),
+            y = 29000, 
+            label = c("PPCDAm"),
+            size = 4)
+  
+
+
+
+
+
+
+```
+
+
+## Parte 3
+
+#### EXERCÍCIO 8:
+
+```{r}
+degradation  %>% filter(year >= 1999) %>% 
+  ggplot(aes(phenomenon,deforestation)) + 
+  geom_boxplot()
+  
+  
+  
+
+```
+
+#### EXERCÍCIO 9:
+
+```{r}
+degradation  %>% filter(year >= 1999) %>%
+  group_by(phenomenon) %>% 
+  count(president,phenomenon) %>% 
+  ggplot(aes(president, n))+
+  geom_col(aes(fill = phenomenon), position = "fill" )
+
+
+```
+
+#### EXERCÍCIO 10:
+
+```{r}
+
+degradation$severity <- as.factor(degradation$severity)
+
+degradation$severity <- ordered( x = degradation$severity,
+           levels = c("Weak", "Moderate", "Strong",
+                      "Very Strong") )
+
+
+```
+
+
+#### EXERCÍCIO 11:
+```{r}
+
+degradation  %>% filter(year >= 1999) %>% 
+  ggplot(aes(severity,fire)) + 
+  geom_boxplot()
+  
+
+
+```
+
+#### EXERCÍCIO 12:
+
+```{r fig.height=4, fig.width=10}
+
+degradation  %>% filter(year >= 1999) %>% 
+  ggplot(aes(severity,fire)) + 
+  geom_boxplot() + 
+  facet_grid(  ~ president)
+  
+degradation %>%
+  filter(year >= 1999) %>%
+  group_by(severity) %>% 
+  count(president,severity) %>% 
+  ggplot(aes(president, n))+
+  geom_col(aes(fill = severity), position = "fill" ) 
+  
+
+
+
+```
+
+  
+
+
+
+
+
+
+
+
+
+

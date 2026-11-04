@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz - Aula 19: Sistema Financeiro</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.7em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Sistema Financeiro</h1>
+<p>Quiz Adaptativo &mdash; Aula 19 &middot; Introdu&ccedil;&atilde;o &agrave; Economia &middot; UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreens&atilde;o de <strong>sistema financeiro, poupan&ccedil;a e investimento nas contas nacionais e o mercado de fundos para empr&eacute;stimos</strong> (Mankiw, Cap.&nbsp;26).<br>Se errar uma quest&atilde;o principal, voc&ecirc; receber&aacute; uma <strong>explica&ccedil;&atilde;o</strong> e um <strong>exerc&iacute;cio de refor&ccedil;o</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Come&ccedil;ar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Pr&oacute;xima &rarr;</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"O sistema financeiro liga poupadores a tomadores por dois canais: mercados (títulos e ações) e intermediários (bancos, fundos). Título é dívida; ação é propriedade.",texto:"Você compra uma <strong>debênture</strong> de uma empresa. O que você se tornou?",alternativas:["Sócio da empresa, com direito a dividendos","Credor da empresa: emprestou e receberá juros","Dono de um pedaço do banco","Funcionário da empresa"],correta:1,explicacao:"Debênture é um <strong>título de dívida</strong>: você emprestou para a empresa e receberá o valor com juros. Quem vira <strong>sócio</strong> (com direito a lucros/dividendos) é quem compra <strong>ações</strong>."},
+{principio:1,tipo:"reforco",contexto:"Título (dívida): credor recebe juro fixo, com prioridade se a empresa quebra. Ação (sócio): recebe lucro, mas só depois dos credores — por isso exige retorno esperado maior.",texto:"Por que, em média, uma <strong>ação</strong> precisa oferecer retorno esperado <em>maior</em> que um <strong>título</strong> da mesma empresa?",alternativas:["Porque ações são isentas de imposto","Porque o acionista corre mais risco: recebe depois dos credores e divide o prejuízo","Porque o BCB obriga","Porque títulos não rendem nada"],correta:1,explicacao:"O acionista é o último a receber se a empresa quebra e divide os prejuízos. Esse risco maior exige um <strong>prêmio</strong>: retorno esperado mais alto que o do credor (que tem juro fixo e prioridade)."},
+{principio:2,tipo:"principal",contexto:"Em uma economia fechada, Y = C + I + G. Isolando o investimento: I = Y − C − G = poupança nacional (S). Logo, S = I (identidade contábil).",texto:"Na contabilidade nacional de uma economia fechada, qual afirmação é <strong>sempre</strong> verdadeira?",alternativas:["A poupança nacional é igual ao investimento (S = I)","O consumo é igual ao investimento","O governo sempre tem superávit","A poupança é sempre maior que o investimento"],correta:0,explicacao:"De Y = C + I + G temos I = Y − C − G = S. Portanto <strong>S = I</strong>: em economia fechada, tudo o que se poupa iguala tudo o que se investe. É uma <em>identidade contábil</em>, não uma hipótese de comportamento."},
+{principio:2,tipo:"reforco",contexto:"Poupar = deixar de consumir (guardar). Investir (no sentido macro) = comprar bens de capital novos (máquinas, fábricas, construção).",texto:"Dona Ana aplica R$ 2.000 num CDB. No sentido macroeconômico, ela fez:",alternativas:["Um investimento (comprou bens de capital)","Uma poupança (adiou consumo); o investimento ocorre quando alguém compra capital produtivo","Um gasto do governo","Uma exportação"],correta:1,explicacao:"Aplicar no CDB é <strong>poupar</strong> — Dona Ana adiou consumo. <strong>Investimento</strong> (I) é a compra de bens de capital novos (ex.: uma fábrica usar esses recursos para comprar uma máquina). Poupar e investir não são sinônimos em economia."},
+{principio:3,tipo:"principal",contexto:"Poupança nacional = poupança privada (Y − T − C) + poupança pública (T − G). Se T > G há superávit; se T < G, déficit (poupança pública negativa).",texto:"O governo passa de superávit para um grande <strong>déficit</strong>, sem mudança na poupança privada. A poupança nacional:",alternativas:["Aumenta","Diminui","Fica igual","Vira investimento estrangeiro"],correta:1,explicacao:"Poupança nacional = privada + pública. Se a pública vira <strong>negativa</strong> (déficit) e a privada não muda, a poupança nacional <strong>cai</strong> — e, por S = I, sobra menos para o investimento."},
+{principio:3,tipo:"reforco",contexto:"Poupança pública = T − G. Déficit (T < G) significa que o governo consome poupança; superávit (T > G) significa que ele a gera.",texto:"Em um ano, o governo arrecada R$ 900 bi (T) e gasta R$ 1.000 bi (G). A poupança pública é:",alternativas:["+R$ 100 bi (superávit)","−R$ 100 bi (déficit: poupança pública negativa)","Zero","R$ 1.900 bi"],correta:1,explicacao:"Poupança pública = T − G = 900 − 1.000 = <strong>−R$ 100 bi</strong>. É um <strong>déficit</strong>: o governo gastou mais do que arrecadou e, portanto, <em>consumiu</em> poupança da economia."},
+{principio:4,tipo:"principal",contexto:"No mercado de fundos, a oferta (poupança) sobe com o juro e a demanda (investimento) cai com o juro. Eles se cruzam na taxa de juros real de equilíbrio r*.",texto:"No mercado de fundos para empréstimos, a <strong>demanda</strong> por fundos tem inclinação negativa porque:",alternativas:["Quanto maior o juro, mais barato investir","Quanto maior o juro, mais caro tomar emprestado e menos projetos de investimento são viáveis","O governo fixa a quantidade","A poupança não depende do juro"],correta:1,explicacao:"A demanda vem de quem quer <strong>investir</strong>. Juro mais alto encarece o empréstimo e torna menos projetos rentáveis, reduzindo a quantidade demandada de fundos — daí a inclinação <strong>negativa</strong>."},
+{principio:4,tipo:"reforco",contexto:"Se o juro está acima do equilíbrio, sobra poupança (excesso de oferta) e o juro cai. Se está abaixo, falta poupança (excesso de demanda) e o juro sobe.",texto:"O juro de mercado está <strong>acima</strong> de r* (equilíbrio). O que tende a acontecer?",alternativas:["Falta poupança e o juro sobe","Sobra poupança (excesso de oferta) e o juro cai até o equilíbrio","Nada muda","O investimento some"],correta:1,explicacao:"Acima de r*, a poupança ofertada supera o investimento demandado: há <strong>excesso de oferta</strong> de fundos. Para colocar essa poupança para trabalhar, o juro <strong>cai</strong> até igualar oferta e demanda."},
+{principio:5,tipo:"principal",contexto:"Crowding out: o déficit público reduz a poupança nacional, desloca a oferta de fundos para a esquerda, eleva o juro e reduz o investimento privado.",texto:"O governo aumenta muito seu déficit e emite mais títulos. Pelo modelo de fundos, o efeito sobre o investimento privado é:",alternativas:["Aumenta (mais dinheiro na economia)","Diminui: o juro sobe e o investimento privado é 'expulso' (crowding out)","Fica igual","Depende só da inflação"],correta:1,explicacao:"O déficit reduz a poupança nacional → oferta de fundos desloca para a esquerda → juro de equilíbrio <strong>sobe</strong> → menos projetos privados viáveis. O governo 'expulsa' o investimento privado: é o <strong>crowding out</strong>."},
+{principio:5,tipo:"reforco",contexto:"No Brasil, a poupança é baixa (~15-17% do PIB) e o déficit é recorrente. O título público sem risco vira o 'piso' do juro, encarecendo o crédito produtivo.",texto:"O governo brasileiro <strong>reduz</strong> seu déficit (ajuste fiscal). Tudo o mais constante, o efeito esperado é:",alternativas:["Juros sobem e investimento cai","Juros caem e investimento privado sobe","A poupança privada desaparece","Nada muda"],correta:1,explicacao:"Menos déficit → poupança pública melhora → poupança nacional aumenta → oferta de fundos desloca para a direita → juro de equilíbrio <strong>cai</strong> → menos crowding out e <strong>mais</strong> investimento privado."}
+];
+var NOMES={1:"Sistema financeiro",2:"S = I (contas nac.)",3:"Poup. p&uacute;blica/privada",4:"Mercado de fundos",5:"Pol&iacute;ticas e Brasil"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=5;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=5;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.innerHTML=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem o sistema financeiro e o mercado de fundos.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e o Capítulo 26 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=5;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise: sistema financeiro (mercados x intermediários); título = dívida (credor) vs ação = propriedade (sócio); por que ação exige retorno maior.",2:"Revise: identidade Y = C + I + G; S = I em economia fechada; diferença entre poupar (adiar consumo) e investir (comprar capital).",3:"Revise: poupança nacional = privada (Y−T−C) + pública (T−G); déficit (T<G) = poupança pública negativa.",4:"Revise: mercado de fundos; oferta (poupança, sobe com juro) e demanda (investimento, cai com juro); ajuste ao equilíbrio r*.",5:"Revise: três políticas (poupança→juro cai; investimento→juro sobe; déficit→crowding out); Brasil: poupança baixa, juros altos."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

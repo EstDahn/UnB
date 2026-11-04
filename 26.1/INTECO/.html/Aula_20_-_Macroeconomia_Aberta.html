@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz - Aula 20: Macroeconomia Aberta</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.7em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Macroeconomia Aberta</h1>
+<p>Quiz Adaptativo &mdash; Aula 20 &middot; Introdu&ccedil;&atilde;o &agrave; Economia &middot; UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreens&atilde;o de <strong>fluxos de bens e capitais, taxa de c&acirc;mbio (nominal e real) e paridade do poder de compra</strong> (Mankiw, Cap.&nbsp;31).<br>Se errar uma quest&atilde;o principal, voc&ecirc; receber&aacute; uma <strong>explica&ccedil;&atilde;o</strong> e um <strong>exerc&iacute;cio de refor&ccedil;o</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Come&ccedil;ar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Pr&oacute;xima &rarr;</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Economia aberta interage por bens (exportações X e importações M) e por capitais. Exportações líquidas: NX = X − M (balança comercial).",texto:"Um país exporta R$ 200 bi e importa R$ 250 bi em um ano. Sua balança comercial está em:",alternativas:["Superávit de R$ 50 bi","Déficit de R$ 50 bi (NX = X − M = −50)","Equilíbrio","Superávit de R$ 450 bi"],correta:1,explicacao:"NX = X − M = 200 − 250 = <strong>−R$ 50 bi</strong>: um <strong>déficit</strong> comercial (importou mais do que exportou). Superávit seria NX > 0; equilíbrio, NX = 0."},
+{principio:1,tipo:"reforco",contexto:"O câmbio é um dos fatores que movem X e M, junto com gostos, preços, renda, custos de transporte e políticas comerciais.",texto:"O dólar sobe de R$ 5 para R$ 6. O efeito mais provável sobre a balança comercial brasileira é:",alternativas:["Piora (importa mais)","Melhora: importados ficam caros (M cai) e exportações ficam competitivas (X sobe)","Não muda","X e M caem igualmente"],correta:1,explicacao:"Real desvalorizado encarece importados em reais (M↓) e barateia os produtos nacionais em dólar (X↑). A balança comercial (NX) <strong>tende a melhorar</strong>."},
+{principio:2,tipo:"principal",contexto:"Cada transação internacional tem dois lados. A identidade central da economia aberta é NX = NCO (exportações líquidas = saída líquida de capital).",texto:"Um país tem <strong>déficit</strong> na balança comercial (NX < 0). Sobre os fluxos de capital, conclui-se que:",alternativas:["O país empresta ao resto do mundo (NCO > 0)","O país recebe capital do exterior (NCO < 0): estrangeiros financiam o excesso de importações","Comércio e capital são independentes","O país não tem reservas"],correta:1,explicacao:"Como NX = NCO, um déficit comercial (NX < 0) implica <strong>NCO < 0</strong>: o país importa capital. O excesso de importações é financiado por estrangeiros comprando ativos nacionais."},
+{principio:2,tipo:"reforco",contexto:"Com o setor externo, S = I + NCO: a poupança financia o investimento interno e a aquisição líquida de ativos externos.",texto:"Um país com poupança interna baixa, que investe mais do que poupa (S < I), tende a apresentar:",alternativas:["NCO > 0 (exporta capital)","NCO < 0: importa poupança/capital do exterior","NX > 0 sempre","Câmbio fixo obrigatório"],correta:1,explicacao:"De S = I + NCO, se S < I então NCO < 0: o país <strong>importa poupança</strong> (capital externo) para financiar parte do seu investimento. É o caso típico do Brasil."},
+{principio:3,tipo:"principal",contexto:"Câmbio nominal = preço de uma moeda em outra (R$/US$). Mais reais por dólar = desvalorização do real; menos reais por dólar = valorização.",texto:"O real passa de R$ 5,00 para R$ 4,00 por dólar. Isso é:",alternativas:["Desvalorização do real; bom para exportadores","Valorização (apreciação) do real; bom para importar e viajar","Inflação cambial","Não altera o poder de compra externo"],correta:1,explicacao:"Menos reais por dólar = real <strong>mais forte</strong> (valorização/apreciação). Importados e viagens ficam mais baratos; exportadores perdem competitividade."},
+{principio:3,tipo:"reforco",contexto:"O câmbio redistribui ganhos: cada nível favorece uns setores e prejudica outros.",texto:"Com o real <strong>desvalorizado</strong> (dólar caro), quem tende a <em>ganhar</em>?",alternativas:["Quem viaja ao exterior","Exportadores (agro, mineração) e a indústria que concorre com importados","Importadores de eletrônicos","Quem compra dólar para poupar"],correta:1,explicacao:"Real fraco favorece <strong>exportadores</strong> e quem concorre com importados (que ficam caros). Perdem importadores, viajantes e o consumidor de produtos com insumo importado (pressão inflacionária)."},
+{principio:4,tipo:"principal",contexto:"Câmbio real = (e × P*)/P, onde e é o câmbio nominal, P* o preço externo e P o interno. Mede a competitividade real, não só a nominal.",texto:"Uma saca de café custa R$ 600 no Brasil e US$ 150 nos EUA, com câmbio de R$ 5,00/US$. O câmbio real é:",alternativas:["0,80","1,25 — a saca americana vale 1,25 saca brasileira (café nacional competitivo)","5,00","150"],correta:1,explicacao:"Câmbio real = (5,00 × 150)/600 = 750/600 = <strong>1,25</strong>. A saca americana equivale a 1,25 saca brasileira: o café nacional está mais barato e tende a exportar. Se fosse < 1, o nacional estaria caro frente ao importado."},
+{principio:4,tipo:"reforco",contexto:"PPC: no longo prazo o câmbio reflete a razão de preços (e ≈ P/P*). Países com inflação mais alta tendem a desvalorizar a moeda.",texto:"Pela paridade do poder de compra, um país com inflação <strong>persistentemente mais alta</strong> que a dos parceiros tende a ter sua moeda:",alternativas:["Valorizando ao longo do tempo","Desvalorizando ao longo do tempo","Estável sempre","Fixa por lei"],correta:1,explicacao:"Se os preços internos sobem mais rápido que os externos, é preciso mais moeda nacional para comprar o mesmo bem lá fora: a moeda <strong>desvaloriza</strong>. Foi o que se viu na hiperinflação brasileira (dólar paralelo acompanhando a inflação)."},
+{principio:5,tipo:"principal",contexto:"O Brasil adotou câmbio flutuante em 1999. Com câmbio flutuante, choques externos (juros dos EUA, commodities, risco) movem o real rapidamente.",texto:"O banco central dos EUA (Fed) sobe fortemente os juros. Efeito mais provável sobre o real, tudo o mais constante?",alternativas:["Real valoriza (entra capital no Brasil)","Real desvaloriza: capital de carteira migra para os EUA, aumentando a procura por dólar","Nenhum efeito","Superávit comercial automático"],correta:1,explicacao:"Juro maior nos EUA atrai capital de carteira para lá. Sai capital do Brasil (procura por dólar sobe) e o real <strong>desvaloriza</strong>. É um dos principais canais pelos quais a política monetária externa afeta o câmbio."},
+{principio:5,tipo:"reforco",contexto:"Balanço de pagamentos: conta-corrente (NX + renda + transferências) e conta financeira (fluxos de capital) se compensam. Brasil costuma ter déficit em conta-corrente financiado por capital externo.",texto:"O Brasil tipicamente tem déficit em conta-corrente. Como ele é financiado?",alternativas:["Imprimindo dólares","Por entrada de capital na conta financeira (IDE e investimento em carteira)","Por superávit comercial","Não é financiado — é impossível"],correta:1,explicacao:"Um déficit em conta-corrente é financiado por <strong>entrada de capital</strong> (IDE e carteira) na conta financeira — reflexo de NX = NCO. O IDE, mais estável, costuma cobrir boa parte; reservas internacionais servem de colchão contra crises."}
+];
+var NOMES={1:"Bens e NX",2:"NX = NCO",3:"C&acirc;mbio nominal",4:"C&acirc;mbio real e PPC",5:"Brasil e BP"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=5;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=5;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.innerHTML=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você domina os conceitos de economia aberta e câmbio.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e o Capítulo 31 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=5;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise: economia aberta (bens e capitais); exportações líquidas NX = X − M; o que move X e M (câmbio, preços, renda).",2:"Revise: saída líquida de capital (NCO); identidade NX = NCO; S = I + NCO; IDE vs investimento em carteira.",3:"Revise: câmbio nominal (R$/US$); valorização x desvalorização; quem ganha e quem perde com cada movimento.",4:"Revise: câmbio real = (e×P*)/P; lei do preço único; PPC e o Big Mac index; inflação alta desvaloriza a moeda.",5:"Revise: regimes de câmbio (Brasil flutuante desde 1999); balanço de pagamentos; choques externos (juros dos EUA) e o real."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

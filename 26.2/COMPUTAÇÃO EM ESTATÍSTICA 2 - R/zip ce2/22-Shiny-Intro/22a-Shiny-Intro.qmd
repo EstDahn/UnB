@@ -1,0 +1,250 @@
+---
+title: "Introdução ao Shiny"
+subtitle: "Criando Aplicações Web Interativas com R"
+author: "IA Gemini instruída por dmp"
+date: "2025-11-11"
+format: 
+  revealjs:
+    theme: simple
+    slide-number: true
+    scrollable: true
+    self-contained: true 
+    embed-resources: true
+    chalkboard: false 
+lang: pt
+execute:
+  echo: true
+  eval: false # Chunks de app Shiny não são executados no render do qmd
+  warning: false
+  message: false
+---
+
+## 1. O que é o Shiny?
+
+Shiny é um pacote R que torna fácil a construção de **aplicações web interativas** diretamente do R.
+
+**Por que usar Shiny?**
+
+* Permite que usuários (colegas, clientes, o público) explorem seus dados e modelos de forma interativa, sem precisar de conhecimento em R.
+* Você pode criar dashboards, visualizadores de dados, calculadoras e muito mais.
+* Você escreve tudo em R, sem precisar de HTML, CSS ou JavaScript (embora você possa usá-los se quiser).
+* É uma ferramenta poderosa para comunicar seus resultados de forma mais eficaz do que um relatório estático.
+
+---
+
+## 2. A Anatomia de um App Shiny
+
+Todo aplicativo Shiny consiste em dois componentes principais, que geralmente colocamos em um único arquivo chamado `app.R`:
+
+1.  **`ui` (User Interface - Interface do Usuário):**
+    * Define a aparência e o layout da sua aplicação.
+    * É onde você coloca os controles de entrada (sliders, botões, caixas de texto) e os espaços para as saídas (plots, tabelas).
+    * Pense nisso como o "esqueleto" da sua página web.
+
+2.  **`server` (Servidor):**
+    * Contém as instruções que o R executa para fazer o aplicativo funcionar.
+    * É aqui que a "mágica" acontece: o `server` lê os valores dos inputs, executa código R (como gerar um gráfico ou rodar um modelo) e cria os outputs para serem exibidos na `ui`.
+
+---
+
+## Estrutura Básica do `app.R`
+
+Um arquivo `app.R` tem a seguinte estrutura mínima:
+
+```r
+# 1. Carregar o pacote shiny
+library(shiny)
+
+# 2. Definir a Interface do Usuário (ui)
+ui <- fluidPage(
+  # ... controles de input e espaços para output vão aqui ...
+)
+
+# 3. Definir a lógica do Servidor (server)
+server <- function(input, output) {
+  # ... código R para gerar outputs vai aqui ...
+}
+
+# 4. Rodar a aplicação
+shinyApp(ui = ui, server = server)
+```
+
+Para rodar este arquivo, basta abri-lo no RStudio e clicar no botão "Run App" que aparece no topo.
+
+---
+
+## 3. Um Primeiro App Simples: "Hello, World!"
+
+Vamos criar o aplicativo Shiny mais simples possível. Ele não terá inputs nem outputs reativos, apenas texto estático.
+
+**Arquivo `app.R`:**
+```r
+library(shiny)
+
+# A UI define o layout. fluidPage é um layout básico que se ajusta ao navegador.
+ui <- fluidPage(
+  titlePanel("Meu Primeiro App Shiny!"), # Um título principal
+  
+  # Um layout de painel lateral
+  sidebarLayout(
+    sidebarPanel(
+      "Este é o painel lateral (sidebar)."
+    ),
+    mainPanel(
+      "Este é o painel principal.",
+      p("Podemos adicionar parágrafos com a função p()."),
+      strong("E texto em negrito com strong().")
+    )
+  )
+)
+
+# O server está vazio porque não há nada reativo acontecendo.
+server <- function(input, output) {
+  # Vazio por enquanto
+}
+
+# Criar e rodar o app
+shinyApp(ui = ui, server = server)
+```
+
+---
+
+## 4. Adicionando Controles de Entrada (Inputs)
+
+Inputs são o que tornam um app Shiny interativo. Eles permitem que o usuário envie informações para a lógica do `server`.
+
+* Cada função de input (`*Input()`) tem dois argumentos principais:
+    1.  `inputId`: Um nome único (string) que usaremos para acessar o valor do input no `server`. **Este nome não pode ter espaços!**
+    2.  `label`: O texto que aparece para o usuário na interface.
+
+**Exemplo: Um slider numérico**
+
+Vamos adicionar um `sliderInput()` à nossa `ui`.
+
+```r
+# Dentro da ui...
+ui <- fluidPage(
+  titlePanel("Um App com Input"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput(inputId = "num_bins",
+                  label = "Número de Barras:",
+                  min = 1,
+                  max = 50,
+                  value = 30) # Valor inicial
+    ),
+    mainPanel(
+      # Deixaremos este espaço para o nosso output
+    )
+  )
+)
+```
+
+---
+
+## 5. Exibindo Resultados (Outputs)
+
+Outputs são os elementos que seu app Shiny cria e exibe na `ui` (plots, tabelas, texto). O processo tem duas partes:
+
+1.  **Na `ui`:** Adicione uma função `*Output()` para criar um espaço reservado para o output.
+    * Exemplo: `plotOutput(outputId = "meu_histograma")`
+
+2.  **No `server`:** Escreva o código R para criar o output. Este código deve ser envolvido por uma função `render*()`.
+    * Exemplo: `output$meu_histograma <- renderPlot({ ... código ggplot ... })`
+
+A `outputId` na `ui` e o nome em `output$` no `server` devem ser **exatamente iguais** para que o Shiny saiba onde colocar o resultado.
+
+---
+
+## 6. Reatividade: A Mágica do Shiny
+
+Como o Shiny sabe quando atualizar um output? **Reatividade.**
+
+* O `server` constrói um "gráfico de dependências" reativo.
+* Quando um `render*` usa um valor de um `input` (ex: `input$num_bins`), ele cria uma dependência.
+* Sempre que o usuário muda o valor do `input$num_bins` (mexendo no slider), o Shiny automaticamente re-executa todo o código dentro do `renderPlot` que depende dele e atualiza o output.
+
+Você não precisa escrever código para observar as mudanças; o Shiny faz isso por você!
+
+---
+
+## 7. Exemplo Completo: Histograma Interativo
+
+Vamos juntar tudo para criar um app que plota um histograma do dataset `faithful` (erupções de geysers), onde o usuário pode controlar o número de barras com um slider.
+
+**Arquivo `app.R` completo:**
+```r
+library(shiny)
+library(ggplot2)
+
+# 1. Definir a UI
+ui <- fluidPage(
+  titlePanel("Histograma Interativo do Dataset 'faithful'"),
+  
+  sidebarLayout(
+    # Painel lateral com os inputs
+    sidebarPanel(
+      sliderInput(inputId = "num_bins",       # ID para o server acessar
+                  label = "Número de Barras:",  # Rótulo para o usuário
+                  min = 1,
+                  max = 50,
+                  value = 30)                 # Valor inicial
+    ),
+    
+    # Painel principal com os outputs
+    mainPanel(
+      # Espaço reservado para o nosso plot
+      plotOutput(outputId = "distPlot") # O ID do output
+    )
+  )
+)
+
+# 2. Definir a lógica do Server
+server <- function(input, output) {
+  
+  # Este bloco renderiza o histograma.
+  # Ele será re-executado automaticamente sempre que 'input$num_bins' mudar.
+  output$distPlot <- renderPlot({
+    
+    ggplot(faithful, aes(x = waiting)) +
+      geom_histogram(bins = input$num_bins, fill = "#007bc2", color = "white") +
+      labs(
+        title = paste("Histograma com", input$num_bins, "barras"),
+        x = "Tempo de espera entre erupções (min)",
+        y = "Frequência"
+      ) +
+      theme_minimal(base_size = 14)
+    
+  })
+  
+}
+
+# 3. Rodar a aplicação
+shinyApp(ui = ui, server = server)
+```
+
+---
+
+## Conclusão e Próximos Passos
+
+Hoje vimos os blocos de construção fundamentais de qualquer aplicativo Shiny:
+
+* **`ui`**: Define a aparência e o layout.
+* **`server`**: Contém a lógica e as instruções em R.
+* **Inputs `*Input()`**: Coletam informações do usuário.
+* **Outputs `*Output()`**: Exibem os resultados.
+* **Funções `render*()`**: Constroem os outputs no `server`.
+* **Reatividade**: A conexão automática entre inputs e outputs.
+
+## O Projeto
+
+**Próximos Passos para seu Projeto:**
+
+* Pense em um dataset que você usou no curso.
+* Que tipo de pergunta você poderia responder com um gráfico interativo?
+* Que tipo de input (slider, menu suspenso, caixa de texto) faria sentido para essa análise?
+
+Comece simples, como no exemplo do histograma, e adicione complexidade aos poucos!
+
+

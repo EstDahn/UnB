@@ -1,0 +1,246 @@
+---
+title: "Importação de Dados com `readr`"
+subtitle: "Baseado no Capítulo 7 de R para Ciência de Dados"
+author: "IA Gemini instruída por dmp"
+date: 2025-10-09
+date-format: "D [de] MMMM [de] YYYY"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    chalkboard: true
+    scrollable: true
+    self-contained: false
+# format:
+#   html:
+#     embed-resources: true  # Key for a single, self-contained file
+#     toc: true              # Optional: adds a table of contents
+#     toc-depth: 3           # Optional: depth of TOC
+#     theme: cosmo           # Optional: choose an HTML theme (cosmo is clean)
+lang: pt
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Introdução à Importação de Dados
+
+A primeira etapa de quase toda análise de dados é carregar seus dados para o R. O pacote `readr`, parte do `tidyverse`, fornece um conjunto rápido e amigável de funções para ler arquivos de dados retangulares, como arquivos CSV (Comma Separated Values) e TSV (Tab Separated Values).
+
+Vamos começar olhando o início do
+[Capítulo 7 de R para Ciência de Dados (Português)](https://pt.r4ds.hadley.nz/data-import.html).
+
+
+**Por que `readr`?**
+
+* Mais rápido que as funções base do R (ex: `read.csv()`) para arquivos grandes.
+* Produz `tibbles` por padrão, que são versões modernas de data frames.
+* Não converte strings em fatores por padrão (comportamento mais seguro).
+* Melhor reprodutibilidade e menos surpresas com tipos de dados.
+* Lida bem com diferentes encodings e formatos de números/datas através de `locale`.
+
+Referência: [Capítulo 7 de R para Ciência de Dados (Português)](https://pt.r4ds.hadley.nz/data-import.html)
+
+```{r setup_ch7, include=FALSE}
+library(tidyverse) # readr é parte do tidyverse
+# Certifique-se de que o arquivo alunos-ce2r-v1.csv está na pasta "dados" do seu projeto
+# Se não, ajuste o caminho ou coloque o arquivo lá.
+```
+
+---
+
+## Funções Principais do `readr`
+
+As funções mais comuns que você usará são:
+
+* `read_csv()`: Para arquivos CSV, onde valores são separados por vírgulas (`,`).
+* `read_csv2()`: Para arquivos CSV onde valores são separados por ponto e vírgula (`;`) e o separador decimal é uma vírgula (`,`). **Muito comum no Brasil!**
+* `read_tsv()`: Para arquivos TSV, onde valores são separados por tabulações (`\t`).
+* `read_delim()`: Para arquivos com qualquer tipo de delimitador. Você especifica o delimitador com o argumento `delim`.
+* `read_lines()`: Para ler um arquivo linha por linha, útil para dados não estruturados ou semi-estruturados.
+* `read_file()`: Para ler um arquivo inteiro como uma única string.
+
+Todas essas funções compartilham uma sintaxe similar e muitos argumentos em comum.
+
+---
+
+## Lendo um Arquivo CSV: O Básico
+
+O primeiro e mais importante argumento para qualquer função `read_*` é `file`, que é o caminho para o arquivo que você quer ler.
+
+**Exemplo com `read_csv()` (dados simulados):**
+Suponha que temos um arquivo `dados_simples.csv` no nosso projeto com o seguinte conteúdo:
+```csv
+x,y,z
+1,2,a
+3,4,b
+5,6,c
+```
+```{r read_csv_exemplo, eval=TRUE}
+# Supondo que "dados_simples.csv" está no diretório do projeto
+meus_dados <- read_csv("dados_simples.csv") 
+print(meus_dados)
+```
+
+**Importante sobre Caminhos:**
+
+* Se o arquivo está no diretório raiz do seu Projeto RStudio, você pode apenas usar o nome do arquivo.
+* Se está em uma subpasta (ex: `dados/`), use o caminho relativo: `"dados/meu_arquivo.csv"`.
+* Evite caminhos absolutos (ex: `"C:/Usuarios/..."`) para melhor portabilidade.
+
+---
+
+## Lendo Dados Brasileiros: `read_csv2()` e `alunos-ce2r-v1.csv`
+
+O arquivo `alunos-ce2r-v1.csv` que vocês receberam usa:
+
+* Separador de colunas: ponto e vírgula (`;`)
+* Separador decimal: ponto (`.`)
+* Encoding: Latin1 (ISO-8859-1), comum para arquivos mais antigos em português com acentos.
+
+Vamos tentar lê-lo. **Coloque o arquivo `alunos-ce2r-v1.csv` em uma pasta chamada `dados` dentro do seu Projeto RStudio.**
+
+**Tentativa 1: `read_csv()` (vai dar errado)**
+```{r alunos_read_csv, error=TRUE}
+# Tentativa com read_csv (espera vírgula como separador)
+alunos <- read_csv("dados/alunos-ce2r-v1.csv")
+print(head(alunos)) # Não vai funcionar bem
+cat("read_csv() provavelmente não funcionará como esperado devido ao delimitador ';'.\n")
+```
+
+---
+
+## Usando `read_csv2()`
+
+`read_csv2()` é projetada para arquivos onde o delimitador é `;` e o decimal é `,`.
+Nosso arquivo `alunos-ce2r.csv` usa `;` como delimitador, mas `.` como decimal.
+
+**Tentativa 2: `read_csv2()` (delimitador correto, mas encoding?)**
+```{r alunos_read_csv2_inicial, error=TRUE}
+# Tentativa com read_csv2 (espera ';' como separador e ',' como decimal)
+alunos_tentativa2 <- read_csv2("dados/alunos-ce2r-v1.csv")
+cat("Últimas linhas com read_csv2 (sem especificar locale):\n")
+print(tail(alunos_tentativa2, n=10))
+cat("\nProblemas prováveis: acentos incorretos.\n")
+```
+Provavelmente os acentos estarão errados.
+
+---
+
+## Lidando com Encoding e Formato Numérico: `locale()`
+
+Para corrigir problemas de acentuação e formato de números, usamos o argumento `locale` dentro das funções `read_*`.
+
+* `locale(encoding = "Latin1")`: Informa ao R que o arquivo usa a codificação Latin1 (comum para acentos em português em arquivos mais antigos).
+* `locale(decimal_mark = ".")`: Informa que o ponto é usado como separador decimal.
+* `locale(grouping_mark = ",")`: Informa que a vírgula é usada como separador de milhares (se aplicável).
+
+**Tentativa 3: `read_csv2()` com `locale` correto**
+```{r alunos_read_csv2_locale}
+# Lendo corretamente com read_csv2, especificando encoding
+alunos <- read_csv2(
+  "dados/alunos-ce2r-v1.csv",
+  locale = locale(encoding = "Latin1")
+)
+cat("Últimas linhas com read_csv2 e locale correto:\n")
+print(tail(alunos,n = 10))
+cat("\nEstrutura dos dados (observe os tipos das colunas):\n")
+glimpse(alunos) # glimpse é ótimo para ver tipos de colunas
+```
+Agora os acentos devem aparecer corretamente e as colunas numéricas devem ser do tipo `dbl` (double/numérico) com decimais.
+
+---
+
+## Formato diferente 
+**delim = ";" e decimal = "."**
+
+* Neste caso é necessário usar `read_delim`, pois `read_csv2` elimina o separador de milhares antes de olhar o locale.
+
+```{r}
+alunos <- read_delim(
+  "dados/alunos-ce2r-v2.csv",
+  locale = locale(encoding = "Latin1", decimal_mark = ".")
+)
+cat("Últimas linhas com read_csv2 e locale correto:\n")
+print(tail(alunos,n = 10))
+```
+
+
+## Argumentos Comuns de `read_*`
+
+* `file`: Caminho para o arquivo.
+* `col_names = TRUE` (padrão): Usa a primeira linha como nomes das colunas.
+    * `col_names = FALSE`: Não usa a primeira linha como nomes; as colunas serão nomeadas `X1`, `X2`, ...
+    * `col_names = c("nome1", "nome2", ...)`: Fornece um vetor de caracteres para usar como nomes das colunas.
+* `skip = n`: Pula as primeiras `n` linhas do arquivo antes de começar a ler os dados. Útil se houver metadados ou comentários no início.
+* `na = c("NA", ".", "-99")`: Especifica um vetor de strings que devem ser interpretadas como valores ausentes (`NA`).
+* `comment = "#"`: Linhas que começam com `#` serão ignoradas.
+
+---
+
+## Especificando Tipos de Coluna: `col_types`
+
+`readr` tenta adivinhar o tipo de cada coluna analisando as primeiras 1000 linhas. Isso geralmente funciona bem, mas às vezes é necessário intervir.
+
+* **Verificando os tipos adivinhados:**
+
+```{r verificar_tipos, eval=TRUE}
+# Supondo que 'alunos' foi carregado
+spec(alunos) # Mostra a especificação completa das colunas
+```
+
+* **Fornecendo `col_types`:**
+    * Usando uma string compacta: `col_types = "cdilfDtT?"`
+        * `c` = character (texto)
+        * `d` = double (número decimal)
+        * `i` = integer (número inteiro)
+        * `l` = logical (lógico TRUE/FALSE)
+        * `f` = factor (fator/categórico)
+        * `D` = date (data)
+        * `t` = time (hora)
+        * `T` = datetime (data e hora)
+        * `_` ou `-` = pular coluna
+        * `?` = adivinhar tipo (padrão para colunas não especificadas)
+    * Usando uma lista de funções `col_*()`:
+        `col_types = list(col_character(),` 
+        `col_double(), col_skip())`
+
+---
+
+## Exemplo: Especificando `col_types`
+
+Suponha que no arquivo `alunos-ce2r-v1.csv`, a coluna `#` foi lida como numérica, mas queremos que seja texto (caractere).
+
+```{r alunos_col_types}
+alunos_com_tipos <- read_csv2(
+  "dados/alunos-ce2r-v1.csv",
+  locale = locale(encoding = "Latin1"),
+  col_types = cols( # Usando a função cols() para especificar
+    `#` = col_character(), # Força `#` a ser caractere
+    .default = col_guess() # Adivinha o tipo para as demais colunas
+  )
+)
+cat("Estrutura com MATRICULA como caractere:\n")
+glimpse(alunos_com_tipos)
+```
+Isto dá mais controle sobre como seus dados são importados.
+
+---
+
+## Escrevendo Arquivos
+
+`readr` também facilita a escrita de dados de volta para arquivos:
+
+* `write_csv(meu_df, "caminho/para/arquivo.csv")`
+* `write_csv2(meu_df, "caminho/para/arquivo_br.csv")` (usa `;` e `,`)
+* `write_tsv(meu_df, "caminho/para/arquivo.tsv")`
+
+**Formato Nativo do R:**
+Para salvar e recarregar objetos R (como data frames, modelos, etc.) de forma eficiente e sem perda de informação, use `write_rds()` e `read_rds()`:
+```{r rds_exemplo, eval=FALSE}
+# write_rds(alunos, "dados/alunos.rds")
+# alunos_recarregados <- read_rds("dados/alunos.rds")
+```
+Arquivos `.rds` são ótimos para salvar resultados intermediários ou objetos complexos.
+

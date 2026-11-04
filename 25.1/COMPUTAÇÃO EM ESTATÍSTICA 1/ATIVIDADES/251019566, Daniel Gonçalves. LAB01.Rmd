@@ -1,0 +1,107 @@
+---
+title: "LAB 01 - RESOLUÇÃO"
+author: "Daniel Gonçalves Gomes Ferreira, 251019566"
+date: "09/04/2025"
+output: html_document
+
+---
+
+# PARTE 1\
+###### **EXERCÍCIO 1:**
+ $$f(x) = 3.x+7$$\ 
+ 
+###### **EXERCÍCIO 2:**
+```{r}
+x <- c(1:101)
+y = (x*3)+7
+```
+
+###### **EXERCÍCIO 3:**
+```{r echo=FALSE, fig.width=6, fig.height=5}
+library(ggplot2) #carregando a biblioteca
+ggplot()+
+  geom_point(aes(x=x, y=y))
+
+```
+
+
+# PARTE 2\ 
+###### **EXERCÍCIO 4:**
+ * Personalidade escolhida: [SÃO JORGE](https://pt.wikipedia.org/wiki/S%C3%A3o_Jorge)
+ 
+###### **EXERCÍCIO 5:**
+Escolhi essa personalidade que também é um *Santo* pois sua história é comovente. O conheci pois ele é padroeiro do **Corinthians**, protegendo e ajudando o clube dentro de seu estádio.
+
+###### **EXERCÍCIO 6:**
+![](C:/Users/dahni/Downloads/são jorge.webp)
+
+###### **EXERCÍCIO 7:**
+![](C:/Users/dahni/Downloads/são jorge.webp){width=30%}
+
+# PARTE 3\
+###### **EXERCÍCIO 8:**
+```{r eval=FALSE}
+head(iris)
+```
+
+###### **EXERCÍCIO 9:**
+```{r}
+set.seed(12)
+mat <- sample(1:100, 25)
+A = matrix(mat,5,5)
+```
+
+###### **EXERCÍCIO 10:**
+
+```{r}
+inversa = solve(A)
+identidade <- round(A %*% inversa)
+identidade
+```
+
+###### **EXERCÍCIO 11:**
+```{r}
+transposta <- t(A)
+transposta
+```
+
+
+###### **EXERCÍCIO 12:**
+
+```{r}
+lst = list(c("Innerblom","Hino do Corinthians","Cachimbo da Paz","Visão Ta Ouro","Garotas não merecem Chorar"),c(1,2,3,4,5),c(2,1,5,3,4),c(TRUE,TRUE,TRUE,FALSE,TRUE))
+lst
+```
+
+
+###### **EXERCÍCIO 13:**
+
+```{r}
+MinhaBanda <- data.frame( "integrantes" = c("Pedro Acosta","Julia Garcia","Felipe Pacheco","Ricardo De Carli"),"Instrumento" = c("Vocal e Guitarra","Baixo","Vocal e Guitarra","Bateria"), "Está vivo?" = c(TRUE,TRUE,TRUE,TRUE), "Idade" = c(26,28,27,31))
+
+MinhaBanda
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

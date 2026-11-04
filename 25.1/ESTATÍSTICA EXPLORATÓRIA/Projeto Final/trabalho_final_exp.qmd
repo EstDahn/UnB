@@ -1,0 +1,309 @@
+---
+title: "Pesquisa sobre o uso de Inteligência Artificial no meio acadêmico"
+format: html
+---
+
+[<strong>EST0033 — Estatística Exploratória</strong>]{style="font-size:16px;"}\
+[Gabriella Beatriz Gonçalves Parente dos Santos – 202048840\
+Karine Alves de Freitas Leite – 251011218\
+Giovanna Pires – 232014914\
+Daniel Gonçalves Gomes Ferreira – 251019566\
+]{style="font-size:14px;"}
+
+[<em>1º Semestre de 2025</em>]{style="font-size:14px;"}
+
+## Introdução
+
+Este projeto tem como objetivo investigar o uso da Inteligência Artificial (IA) no meio acadêmico, por meio da análise de um formulário aplicado a estudantes da área da estatística.\
+A pesquisa busca compreender, de maneira exploratória, como a IA tem sido utilizada, percebida e debatida no contexto educacional.\
+A partir da coleta de dados primários, pretende-se identificar padrões de comportamento, possíveis correlações entre variáveis (frequência de uso, semestre atual, desempenho) e avaliar o impacto do uso de IA nas práticas acadêmicas.
+
+## Metodologia
+
+A base de dados utilizada neste estudo foi construída a partir de um formulário online aplicado através da plataforma "Google Forms" de forma não probabilística.\
+A estrutura do questionário foi composta por 7 questões obrigatórias, sendo 5 fechadas e 2 abertas.\
+Os dados foram importados para o RStudio no formato CSV e analisados com ferramentas da Estatística Exploratória.
+
+O formulário pode ser acessado através do seguinte link:\
+<https://forms.gle/ZNq9KNoFVafqnq917>
+
+
+## Preparação dos dados:
+
+```{r setup_professor, include=FALSE}
+# Chunk de configuração inicial
+# Define opções globais para os chunks de código
+knitr::opts_chunk$set(
+  echo = FALSE, # Não mostra o código R no documento final por padrão
+  message = FALSE,
+  warning = FALSE,
+  fig.align = 'center'
+)
+
+# Carrega os pacotes necessários para a análise
+# Certifique-se de que eles estão instalados com install.packages("nome_do_pacote")
+library(tidyverse) # Inclui readr, dplyr, ggplot2, etc.
+library(knitr)
+library(DescTools) # Para Gamma, etc.
+```
+
+```{r preparacao_dos_dados}
+
+
+
+#pacotee usado
+library(waffle)
+library(tidyverse) 
+library(scales)
+library(ggthemes)
+
+Respostas_Original <- read.csv2("Formulário_Uso de IA no meio acadêmico NOVO.csv", sep = ",")
+
+Respostas <- Respostas_Original %>% select(!Carimbo.de.data.hora)
+
+names(Respostas) <- c("semestre","freq_de_uso_ia",
+                      "nota_ia", "erro_ia","como_age",
+                      "orientacao_prof","grau_confianca")
+
+Respostas$semestre <- as.factor(Respostas$semestre) 
+Respostas$freq_de_uso_ia <- as.factor(Respostas$freq_de_uso_ia) 
+Respostas$erro_ia <- as.factor(Respostas$erro_ia)
+Respostas$como_age <- as.factor(Respostas$como_age) 
+Respostas$orientacao_prof <- as.factor(Respostas$orientacao_prof)
+
+
+#gsub("padrao","substituição", arquivo) - susbtitui o , por . para nao ter NA´s
+Respostas$nota_ia <- round(as.numeric(gsub(",",".",Respostas$nota_ia)),1)
+
+
+
+Respostas$grau_confianca <- gsub("%","", Respostas$grau_confianca)
+Respostas$grau_confianca <- as.numeric( gsub(",",".", Respostas$grau_confianca) ) 
+
+
+cat("Estrutura final do dataframe 'Respostas':\n")
+str(Respostas)
+
+
+```
+## Descrição das variáveis e analise unidimensional
+
+
+* **Variável:** ***Semestre***.\
+Esta variável quantitativa discreta denuncia o período em que o participante se encontra na graduação.\
+\
+Portanto, observando a frequência relativa e absoluta de cada semestre, é possivel inferir que aproximadamente três quartos - ($3/4$) - dos participantes estão no primeiro semestre.\
+
+```{r Semestre}
+
+ggplot(Respostas, aes(y = fct_infreq(semestre) , fill = semestre)) +
+  geom_bar() +
+  ylab("Semestre") + xlab("Quantidade de participantes") +
+  labs(title = "Gráfico de frequência absoluta") 
+
+
+cat("Tabela de frequência relativa:\n")
+prop.table(table(Respostas$semestre)) * 100
+
+
+```
+
+
+* **Variavel:** ***Frequencia semanal de uso de IA***.\
+Esta variável qualitativa nominal comunica a frequência semanal de uso de IA´s para fins acadêmicos.\
+\
+A partir dos gráfico, é possivel analisar que os estudantes que nunca usam ou usam raramente a IA tem uma representação muito baixa, chegando perto de representar 10% da amostra.
+
+```{r Frequencia de uso}
+
+ggplot(Respostas, aes(x = "", fill = fct_infreq(freq_de_uso_ia) ) ) +
+  geom_bar(width = 1, stat = "count") +
+  coord_polar("y", start = 180) +
+  theme_void() +
+  labs(title = "GRÁFICO DE PIZZA - Frequência semanal de uso da IA",
+       fill = "Frenquência:" ) +
+  geom_text(stat = "count", 
+            aes(label = percent(..count../sum(..count..) ) ),
+            position = position_stack(vjust = 0.5) )  
+
+#REVER O GEOM_TEXT e pacote scales. Eu não consegui colocar a % correspondente 
+#em casa setor :( ; Tive que apelar pra IA, justo oq estamos analisando
+
+
+
+
+```
+
+* **Variavel:** ***Nota atribuiada a IA***.\
+Esta variável quantitativa continua manifesta a satisfação do participante na utilização dos serviços de ia no estudos acadêmicos - em uma escala de 0 a 10.\
+\
+Dado todas as observações, temos os seguintes valores:\
+\
+  + Valor máximo: **`r max(Respostas$nota_ia)`**
+  + Média: **`r round(mean(Respostas$nota_ia),2)`**
+  + Mediana: **`r median(Respostas$nota_ia)`**
+  + Valor mínimo: **`r min(Respostas$nota_ia)`**
+  + Desvio padrão: **`r sd(Respostas$nota_ia)`**
+  + Primeiro Quartil: **`r quantile(Respostas$nota_ia, 0.25)`**
+  + Terceiro Quartil: **`r quantile(Respostas$nota_ia, 0.75)`**
+
+Tais valores, evidenciam uma tendencia dos estudantes a atribuir uma nota boa-alta para o desempenho da IA, acima de 7.
+
+```{r Nota pra IA}
+ggplot(Respostas, aes(x = "", y = nota_ia)) +
+  geom_point() +
+  geom_boxplot() +
+  ylim(0, NA) + theme_wsj(base_size = 8) + scale_color_wsj() +
+  ggtitle("Boxplot") 
+  
+
+ggplot(Respostas, aes(nota_ia) ) +
+  geom_histogram(aes(y = ..density..),
+                 binwidth = 0.25,
+                 fill = "blue",
+                 color = "black") + 
+  ylab("") + xlab("Nota atribuida para a IA") +
+  xlim(0,NA)  +
+  geom_density() +
+  ggtitle("",subtitle = "Histograma + Gráfico de densidade") 
+
+
+
+
+
+```
+
+
+
+
+* **Variavel:** ***Erros percebidos pelo usário***.\
+Esta variável quantitativa discreta denuncia a quantidade de erros que foram percebido pelos participante ao usar a IA.\ 
+\
+É observado que, ao menos uma vez na semana, metade dos alunos presenciam um erro da IA.\
+
+```{r Erros Percebidos}
+ggplot(Respostas, aes(x = "" , fill = erro_ia)) +
+  geom_bar(width = 1, stat = "count") +
+  coord_polar("y") +
+  labs(title = "Gráfico de pizza", 
+       fill = "Quantidade de \nerros percebidos")+
+  theme_void() +
+  geom_text(stat = "count", 
+            aes(label = percent(..count../sum(..count..) ) ),
+            position = position_stack(vjust = 0.5) ) 
+```
+
+
+* **Variavel:** ***Açao do usuário ao perceber o erro***.\
+Esta variável qualitativa nominal indica a ação do participante ao presenciar um
+erro da IA.\
+\
+De acordo com a representação gráfica, é inferido que a ação mais comum é procurar
+outra fonte de pesquisa ou corrigir por conta própia o erro. Sendo anormal deixar
+de ultilizar a ferramenta.
+
+```{r Ação do Erro}
+
+Tb_relativa_como_age <- prop.table(table(Respostas$como_age)) * 100
+
+  waffle(Tb_relativa_como_age,rows = 9,size = 0.6, 
+       title = "Gráfico waffle")
+  
+ggplot(Respostas, aes(x = '', fill = como_age)) + 
+  geom_bar(position = "fill") + labs( subtitle = "Frequência Relativa",
+                                      fill = "Ação do estudante") +
+  xlab("") + ylab("%") +
+  geom_text(stat = "count", 
+            aes(label = percent(..count../sum(..count..) ) ),
+            position = position_fill(vjust = 0.5) )
+
+
+```
+
+
+* **Variavel:** ***Orientação do professor sobre o uso de IA***.\
+Esta variável qualitativa nominal contém a informação de quantos alunos já
+receberam orientação para **não** ultilizar IA para fins academicos.\
+\
+Dessa forma, com apenas 10% a mais de professores desaconselhando o uso de IA,
+não há um tendencia explícita que evidencia a opnião dos professores.
+
+```{r Orientaçao prof}
+
+ggplot(Respostas, aes(orientacao_prof, fill = orientacao_prof ))  +
+  geom_bar() + 
+  labs( title = "Você já foi orientado pelo professor a não usar IA?",
+        fill = "") + ylab("") + xlab("") + theme_tufte()
+
+
+ggplot(Respostas, aes("", fill = orientacao_prof ))  +
+  geom_bar(position = "fill") + 
+  labs( title = "Você já foi orientado pelo professor a não usar IA?",
+        fill = "") +
+  geom_text(
+    aes(label = paste0(round(..count../sum(..count..) * 100), "%")),
+    stat = "count",
+    position = position_fill(vjust = 0.5),
+    color = "white",
+    size = 5,
+    fontface = "bold"
+  )
+
+
+```
+
+
+
+
+
+* **Variavel:** ***Grau de cofiança nas ferramentas de IA***.\
+Esta variável quantitativa continua indica a confiança dos estudantes na ferramentas de IA.\
+\
+Dado todas as observações, temos os seguintes valores:\
+\
+  + Valor máximo: **`r max(Respostas$grau_confianca)`**
+  + Média: **`r round(mean(Respostas$grau_confianca),2)`**
+  + Mediana: **`r median(Respostas$grau_confianca)`**
+  + Valor mínimo: **`r min(Respostas$grau_confianca)`**
+  + Desvio padrão: **`r sd(Respostas$grau_confianca)`**
+  + Primeiro Quartil: **`r quantile(Respostas$grau_confianca, 0.25)`**
+  + Terceiro Quartil: **`r quantile(Respostas$grau_confianca, 0.75)`**
+  
+Destarte, com desvio padrão moderado, e acumulo de valores entre 70% 
+e 85%, é testemunhado uma confiança pertinente na Inteligência Artificial.\
+  
+
+
+```{r Grau de confianca}
+
+ggplot(Respostas, aes(y = grau_confianca)) +
+  geom_boxplot() + ylab("% de confiança") + 
+  scale_x_continuous( labels = NULL ) #remove os valores das abscissas
+  
+
+ggplot(Respostas, aes(grau_confianca) ) +
+  geom_histogram(
+    aes(y = ..density..),
+                 binwidth = 5, fill = "blue",
+                 color = "white", alpha = 1
+    ) + 
+  geom_density(fill = "orange", color = NA, alpha = 0.6) +
+  ylab("") + xlab("% de confiança") + 
+  ggtitle("",subtitle = "Histograma + Gráfico de densidade") +
+  geom_text(stat = "bin",
+    aes(y = ..density.., label = ..count..),
+    vjust = -0.5,
+    size = 3.4,
+    color = "black",
+    binwidth = 5
+  ) +
+  scale_y_continuous( labels = NULL )+ #remove os valores das abscissas
+  theme(
+    panel.background = element_rect(fill = "transparent"),
+    plot.background = element_rect(fill = "transparent"),
+    panel.grid = element_blank(), 
+    legend.position = "top"
+  )
+  
+```
+

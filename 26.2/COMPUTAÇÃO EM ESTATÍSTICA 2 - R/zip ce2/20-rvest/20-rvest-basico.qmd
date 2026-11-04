@@ -1,0 +1,229 @@
+---
+title: "Web Scraping (Aula 1): A Mecânica do `rvest`"
+subtitle: "Computação em Estatística II: R (Baseado no R4DS Cap. 24)"
+author: "Prof. Donald M. Pianto"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    scrollable: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## 1. Introdução ao Web Scraping
+
+### O que é?
+
+**Web scraping** (raspagem de dados) é o processo de extrair dados de websites de forma automática.
+
+Usamos o pacote `rvest`, que é desenhado para funcionar de forma integrada com o `tidyverse`.
+
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rvest)
+```
+
+---
+
+### 1.1 Ética e Legalidade
+
+Antes de começar, é crucial discutir a ética.
+
+* **Respeite o `robots.txt`:** Muitos sites têm um ficheiro `www.NOMEDOSITE.com/robots.txt` que diz quais partes do site os *bots* (como o seu script) **não** devem aceder.
+* **Não sobrecarregue o servidor:** O seu script pode enviar centenas de pedidos por segundo. Limite a taxa de pedidos (ex: `Sys.sleep(1)` entre as requisições).
+* **Verifique os Termos de Serviço:** Alguns sites proíbem explicitamente o scraping.
+* **Use APIs primeiro:** Se um site oferece uma API (Interface de Programação de Aplicações), use-a! É mais estável e legal.
+
+---
+
+## 2. O Básico de HTML
+
+Para extrair dados de uma página web, precisamos de entender a sua linguagem: **HTML** (HyperText Markup Language).
+
+Um ficheiro HTML é um documento de texto com *tags* (etiquetas) que definem a estrutura.
+
+### Anatomia de um Elemento HTML
+
+```html
+<tag atributo1="valor1" atributo2="valor2">
+  Conteúdo de texto
+</tag>
+```
+
+* **Tag:** Define o tipo de elemento (ex: `<p>` para parágrafo, `<a>` para link).
+* **Atributo:** Propriedades do elemento (ex: `href="url_do_link"` no `<a>`).
+* **Conteúdo:** O texto visível na página.
+
+---
+
+### Seletores CSS: O Endereço dos Dados
+
+Para dizer ao `rvest` o que extrair, usamos **Seletores CSS**. Os três seletores básicos são:
+
+1.  **Por Tag:** `p` (seleciona todos os parágrafos `<p>`)
+2.  **Por Classe:** `.minha-classe` (seleciona `<tag class="minha-classe">`)
+3.  **Por ID:** `#meu-id` (seleciona `<tag id="meu-id">`)
+
+---
+
+## 3. O Fluxo de Trabalho do `rvest`
+
+O scraping com `rvest` segue 4 passos:
+
+1.  `read_html(url)`: Lê a página web.
+2.  `html_elements(seletor)`: Seleciona múltiplos nós/elementos na página.
+3.  `html_text2()`: Extrai o texto.
+4.  `html_attr(atributo)`: Extrai o valor de um atributo.
+
+---
+
+### 3.1 Ler HTML
+
+Primeiro, lemos o HTML.
+
+```{r}
+html <- read_html("https://rvest.tidyverse.org/articles/starwars.html")
+html
+```
+
+Abre o código fonte da página web e examine ele.
+
+---
+
+### 3.2 Selecionar Nós com `html_elements()`
+
+Selecionamos os títulos dos filmes, que estão dentro de tags `<h2>`.
+
+```{r}
+# O seletor "h2" é muito genérico e captura "On this page"
+titulos_elementos_ruim <- html |> 
+  html_elements("h2")
+
+titulos_elementos_ruim |> html_text2()
+```
+
+---
+
+### 3.3 Extrair Texto (Forma Correta)
+
+Para corrigir isso, usamos um seletor mais específico. Os títulos dos filmes têm um atributo `data-id`.
+
+```{r}
+# Seletor de atributo: seleciona <h2> que TENHA um atributo 'data-id'
+seletor_titulo_correto <- "h2[data-id]"
+
+titulos_elementos <- html |> 
+  html_elements(seletor_titulo_correto)
+
+titulos_elementos |> 
+  html_text2()
+```
+
+---
+
+## 4. Estudo de Caso: Filmes Star Wars
+
+Vamos juntar tudo para extrair o título, diretor e data de lançamento de todos os filmes da página.
+
+### 4.1 Títulos
+
+Usamos o seletor correto que descobrimos.
+
+```{r}
+titulos <- html |> 
+  html_elements("h2[data-id]") |> 
+  html_text2()
+
+titulos
+```
+
+---
+
+### 4.2 Datas e Diretores (A Abordagem Correta)
+
+No ficheiro `starwars.html`, as datas e os diretores estão em tags `<p>` que são filhos diretos de `<section>`.
+
+```html
+<section>
+  <h2 data-id="1">A New Hope</h2>
+  <p>Released: 1977-05-25</p>
+  <p>Director: <span class="director">George Lucas</span></p>
+  <div class="crawl">
+    <p>...texto do crawl...</p>
+  </div>
+</section>
+```
+Podemos extrair *todos* esses parágrafos e depois usar `stringr` para filtrar e limpar.
+
+---
+
+### 4.2.1 Extrair Todos os Parágrafos Relevantes
+
+O seletor `section > p` seleciona apenas os `<p>` que são filhos diretos de `<section>`, ignorando o parágrafo do "crawl" que está dentro de um `<div>`.
+
+```{r}
+paragrafos_texto <- html |> 
+  html_elements("section > p") |> 
+  html_text2()
+
+head(paragrafos_texto)
+```
+Temos um vetor de 14 elementos, alternando entre data e diretor.
+
+---
+
+### 4.2.2 Separar Datas e Diretores
+
+Agora usamos `str_subset` para filtrar o vetor de texto e `str_remove` para limpar os prefixos.
+
+```{r}
+# Filtrar apenas as datas e limpar
+datas <- paragrafos_texto |> 
+  str_subset("^Released: ") |> 
+  str_remove("Released: ") |> 
+  str_trim()
+
+datas
+```
+
+```{r}
+# Filtrar apenas os diretores e limpar
+diretores <- paragrafos_texto |> 
+  str_subset("^Director: ") |> 
+  str_remove("Director: ") |> 
+  str_trim()
+
+diretores
+```
+
+---
+
+### 4.3 Juntar Tudo num Tibble
+
+Agora que temos três vetores limpos e do mesmo tamanho (7 elementos cada), podemos criar o nosso data frame.
+
+```{r}
+star_wars_df <- tibble(
+  titulo = titulos,
+  diretor = diretores,
+  data_lancamento = as.Date(datas)
+)
+
+star_wars_df
+```
+---
+
+## 5. Próxima Aula
+
+Na próxima aula, vamos aprender:
+
+1.  Como "descobrir" quais seletores usar em *qualquer* site, usando a ferramenta "Inspecionar Elemento" do navegador.
+2.  Seletores CSS mais avançados.
+3.  Como lidar com problemas do mundo real, como raspar dados de múltiplas páginas (paginação).
+

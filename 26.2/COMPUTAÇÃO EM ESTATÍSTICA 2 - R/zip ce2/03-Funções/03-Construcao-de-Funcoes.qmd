@@ -1,0 +1,290 @@
+---
+title: "Unidade 1: Construção de Funções em R"
+subtitle: "Computação em Estatística II"
+author: "Prof. Donald M. Pianto"
+date: today
+format:
+  html:
+    embed-resources: true
+    toc: true
+    theme: cosmo
+lang: pt
+execute:
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Na aula de revisão, vimos como usar `dplyr` para filtrar dados e `if`/`else` para controlar a lógica do nosso código. Vimos também que copiar e colar o mesmo código várias vezes é ineficiente e propenso a erros.
+
+A solução para este problema é a **criação de funções**. Uma função é uma ferramenta reutilizável que encapsula uma série de operações.
+
+### Por que criar funções?
+
+1.  **Evitar a repetição:** Se você se vir a copiar e colar o mesmo bloco de código mais de duas vezes, é um sinal de que precisa de uma função.
+2.  **Tornar o código mais legível:** Funções bem nomeadas tornam a sua análise mais fácil de ler e entender.
+3.  **Reduzir erros:** Ao centralizar a lógica num único local, a depuração e a manutenção do código tornam-se muito mais simples.
+
+### A Anatomia de uma Função
+
+A estrutura básica de uma função em R é a seguinte:
+
+```r
+nome_da_funcao <- function(argumento1, argumento2) {
+  # Corpo da função: o que ela faz
+  resultado <- argumento1 + argumento2
+  
+  # Valor de retorno: o que a função devolve
+  return(resultado) 
+}
+```
+
+Hoje, vamos construir duas funções passo a passo para explorar cada um destes componentes.
+
+```{r setup}
+# Carregar pacotes que usaremos na aula
+library(tidyverse)
+library(gapminder)
+```
+
+---
+
+## Exemplo 1: Uma Função Simples (`maxminratio`)
+
+Vamos começar com um exemplo simples para calcular a razão entre o valor máximo e mínimo de um vetor numérico.
+
+### Passo 1: A Função Básica
+
+Uma função de uma linha é a forma mais simples de começar.
+
+```{r}
+maxminratio <- function(x) {
+  max(x) / min(x)
+}
+
+# Testando a função
+meu_vetor <- c(1, 2, 5, 10)
+maxminratio(meu_vetor)
+```
+
+Podemos até usar esta função com `apply` para aplicá-la a cada coluna de uma matriz.
+
+```{r}
+minha_matriz <- matrix(1:12, ncol = 3)
+apply(minha_matriz, 2, maxminratio)
+```
+
+### Passo 2: Introduzindo um Problema (Valores `NA`)
+
+O que acontece se o nosso vetor de entrada tiver um valor ausente (`NA`)?
+
+```{r}
+vetor_com_na <- c(1, 2, 5, 10, NA)
+maxminratio(vetor_com_na)
+```
+
+A função retorna `NA`. Isto pode ser o comportamento desejado, mas muitas vezes queremos que a função ignore os `NA`s.
+
+### Passo 3: Adicionando um Argumento com Valor Padrão
+
+Podemos tornar a nossa função mais robusta e flexível, permitindo que o usuário decida como lidar com os `NA`s. Fazemos isso adicionando um argumento com um valor padrão.
+
+```{r}
+maxminratio <- function(x, na.rm = FALSE) {
+  max(x, na.rm = na.rm) / min(x, na.rm = na.rm)
+}
+```
+
+* **`na.rm = FALSE`**: Este é o **valor padrão**. Se o usuário não especificar nada, a função comportar-se-á como antes.
+* **`na.rm = na.rm`**: Passamos o valor do nosso argumento `na.rm` para as funções `max()` e `min()`.
+
+Agora, a função é muito mais útil:
+
+```{r}
+# Comportamento padrão (ainda retorna NA)
+maxminratio(vetor_com_na)
+
+# Novo comportamento (ignora o NA)
+maxminratio(vetor_com_na, na.rm = TRUE)
+```
+
+---
+
+## Exemplo 2: Uma Função de Análise de Dados
+
+Agora, vamos construir uma função mais completa, inspirada numa das nossas tarefas de casa. O objetivo é criar uma ferramenta que analise os dados do `gapminder` para um país específico.
+
+### Passo 1: O Esqueleto da Função
+
+Começamos por definir o nome da função e os seus argumentos. Queremos que o usuário possa especificar um `pais` e, opcionalmente, um vetor de `anos`.
+
+```{r}
+analisar_pais <- function(pais, anos = unique(gapminder$year)) {
+  # O corpo da função ainda está vazio
+}
+```
+
+### Passo 2: Lógica Principal e Retorno
+
+O núcleo da nossa função será um filtro `dplyr`. No final, queremos que a função **retorne** o `data.frame` filtrado.
+
+```{r}
+analisar_pais <- function(pais, anos = unique(gapminder$year)) {
+  
+  dados_filtrados <- gapminder |>
+    filter(country == pais, year %in% anos)
+  
+  return(dados_filtrados)
+}
+
+# Testando
+dados_brasil <- analisar_pais(pais = "Brazil", anos = c(1997, 2002, 2007))
+print(dados_brasil)
+```
+
+### Passo 3: Tratamento de Erros (Validação de Entradas)
+
+O que acontece se um usuário digita um nome de país que não existe?
+
+```r
+# analisar_pais(pais = "Brasil") # Isto daria um resultado vazio, o que é confuso.
+```
+
+Uma função robusta deve verificar as suas entradas e falhar de forma controlada e informativa. Usamos `if` e `stop()` para isso.
+
+```{r}
+analisar_pais <- function(pais, anos = unique(gapminder$year)) {
+  
+  # 1. Verificar se o país existe
+  if (!pais %in% unique(gapminder$country)) {
+    stop("País não encontrado. O nome do país precisa estar em inglês!")
+  }
+  
+  # 2. Verificar se todos os anos existem
+  if (!all(anos %in% unique(gapminder$year))) {
+    stop("Ano não disponível.")
+  }
+  
+  # Lógica principal (como antes)
+  dados_filtrados <- gapminder |>
+    filter(country == pais, year %in% anos)
+  
+  return(dados_filtrados)
+}
+
+# Testando o tratamento de erros
+try(analisar_pais(pais = "Brasil"), silent = TRUE)
+try(analisar_pais(pais = "Brazil", anos = c(2007, 2008)), silent = TRUE)
+```
+
+### Passo 4: Saídas Múltiplas e Condicionais
+
+Uma função não precisa de se limitar a retornar um único objeto. Ela pode ter "efeitos colaterais", como imprimir mensagens ou criar gráficos.
+
+Vamos adicionar duas funcionalidades:
+1.  Imprimir sempre uma mensagem sobre a população em 2007.
+2.  Criar um gráfico da expectativa de vida, mas apenas se o usuário o solicitar.
+
+```{r}
+analisar_pais <- function(pais, 
+                          anos = unique(gapminder$year), 
+                          gerar_grafico = TRUE,
+                          ...) { # Adicionamos o argumento ...
+  
+  # Validação de Entradas (como antes)
+  if (!pais %in% unique(gapminder$country)) {
+    stop("País não encontrado. O nome do país precisa estar em inglês!")
+  }
+  if (!all(anos %in% unique(gapminder$year))) {
+    stop("Ano não disponível.")
+  }
+  
+  # Lógica Principal
+  dados_filtrados <- gapminder |>
+    filter(country == pais, year %in% anos)
+  
+  # --- Saídas ---
+  
+  # 1. Mensagem no console (efeito colateral)
+  pop_pais_2007 <- gapminder$pop[gapminder$country == pais & gapminder$year == 2007]
+  continente_pais <- unique(gapminder$continent[gapminder$country == pais])
+  pop_continente_2007 <- sum(as.numeric(gapminder$pop[gapminder$continent == continente_pais & gapminder$year == 2007]))
+  percentual_pop <- (pop_pais_2007 / pop_continente_2007) * 100
+  
+  cat(
+    paste0("Em 2007, ", pais, " respondia por ", 
+           round(percentual_pop, 2), "% da população do continente.\n")
+  )
+  
+  # 2. Gráfico condicional (efeito colateral)
+  if (gerar_grafico) {
+    plot_vida <- ggplot(dados_filtrados, aes(x = year, y = lifeExp)) +
+      geom_line(color = "blue", linewidth = 1) +
+      geom_point(color = "red", size = 3) +
+      labs(
+        title = paste("Expectativa de Vida em", pais),
+        x = "Ano",
+        y = "Expectativa de Vida"
+      ) +
+      theme_minimal() +
+      labs(...) # Passamos o argumento ... para o labs()
+    
+    print(plot_vida)
+  }
+  
+  # 3. Valor de retorno
+  return(dados_filtrados)
+}
+```
+
+### Passo 5: Usando o Argumento `...` (Avançado)
+
+O argumento `...` (dots) é especial: ele captura quaisquer argumentos que não correspondam aos argumentos nomeados da função. Isso é útil para passar opções para outras funções dentro da sua.
+
+Na nossa função, passamos o `...` para `labs()`. Isso permite que o usuário personalize os rótulos do gráfico diretamente!
+
+```{r}
+# Chamada padrão
+analisar_pais("Argentina", anos = c(1982, 1992, 2002))
+
+# Chamada personalizada com o argumento ...
+analisar_pais("Argentina", anos = c(1982, 1992, 2002),
+              subtitle = "Período de redemocratização e crises",
+              caption = "Fonte: Pacote gapminder")
+```
+---
+  
+## Exercício de Aula: Coeficiente de Variação
+
+Agora é a sua vez. Vamos criar uma função para uma medida estatística comum.
+
+O **coeficiente de variação (CV)** é uma medida de dispersão relativa, definida como o desvio padrão dividido pela média: `CV = sd(x) / mean(x)`.
+
+**Sua Tarefa:**
+
+1.  **Parte A: Função Básica**
+    * Crie uma função chamada `coef_variacao` que recebe um único argumento, um vetor numérico `x`.
+    * O corpo da função deve calcular o desvio padrão de `x`, a média de `x`, e retornar o resultado da divisão do primeiro pelo segundo.
+
+2.  **Parte B: Função Robusta**
+    * Modifique a sua função `coef_variacao` para que ela possa lidar com vetores que contêm valores `NA`.
+    * Assim como no nosso exemplo `maxminratio`, adicione um argumento `na.rm` com o valor padrão `FALSE`.
+    * Passe este argumento para as funções `sd()` e `mean()` dentro do corpo da sua função.
+
+3.  **Teste a sua função** com os vetores `vetor_a` e `vetor_b` fornecidos abaixo.
+
+```{r exercicio_aula_setup}
+vetor_a <- c(10, 12, 15, 18, 20)
+vetor_b <- c(10, 12, 15, 18, 20, NA)
+```
+
+```{r exercicio_aula_aluno, eval=FALSE}
+# Escreva a sua função aqui
+
+
+# Teste a sua função aqui
+# coef_variacao(vetor_a)
+# coef_variacao(vetor_b)
+# coef_variacao(vetor_b, na.rm = TRUE)
+```

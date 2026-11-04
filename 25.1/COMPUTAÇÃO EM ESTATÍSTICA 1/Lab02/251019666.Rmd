@@ -1,0 +1,149 @@
+---
+title: '251019566'
+author: "Daniel Gonçalves Gomes Ferreira"
+date: "2025-05-17"
+output:
+  html_document:
+    theme: sandstone
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+ANALISEfifa21 <- read.csv( "fifa21.csv", sep=";" )
+library(tidyverse)
+```
+
+# Exercício 1:
+```{r}
+
+MaxOverall = max(ANALISEfifa21$overall)
+MinPotential = min(ANALISEfifa21$potential)
+summary(ANALISEfifa21)
+
+#CÓDIGOS USADOS DENTRO DO TEXTO: `r MaxOverall`, `r MinPotential`
+```
+Dessa forma, a maior classificação geral pertence ao jogador com **`r MaxOverall`** de *Overall*.
+
+
+E os jogadores com menor potencial tem **`r MinPotential`** de *Potential*
+
+---
+
+# Exercício 2:
+```{r}
+best_players = ANALISEfifa21[ANALISEfifa21$overall >= 90,]
+NomeMaxOverall = filter(ANALISEfifa21, overall == MaxOverall )
+
+#CÓDIGOS USADOS DENTRO DO TEXTO:`r NomeMaxOverall$name`, `r MaxOverall`,`r best_players$name`
+
+#COMENTÁRIO: alterar a fonte e cor do texto exibido com a saída:html <span style="font-size: px; color: red;">`r best_players$name`.</span>
+```
+O jogador com a maior classificação é o: **`r NomeMaxOverall$name`** tendo **`r MaxOverall`** de classificação geral.
+
+E os jogadores com a classificação geral acima de 90 são: **`r best_players$name`**.
+
+---
+
+# Exercício 3:
+```{r}
+ExisteSemTime = any(is.na(ANALISEfifa21$team))
+QuantidadeSemTime = nrow(which(is.na(ANALISEfifa21$team)))
+
+#CÓDIGO USADO PARA O TEXTO: `r if (!ExisteSemTime) {"Não tem jogadores sem time"} else {paste("Existe", QuantidadeSemTime, "de jogadores sem time")}`
+```
+`r if (!ExisteSemTime) {"Não existe jogadores sem time"} else {paste("Existe", QuantidadeSemTime, "de jogadores sem time")}`
+
+---
+
+# Exercício 4:
+
+```{r}
+worst_potential = filter(ANALISEfifa21, potential == MinPotential )
+
+#CÓDIGO USADO PARA O TEXTO:`r worst_potential$name`
+```
+OS jogadores com o pior potencial são: **`r worst_potential$name`**
+
+---
+
+# Exercício 5:
+```{r}
+
+ANALISEfifa21$team = replace(ANALISEfifa21$team,ANALISEfifa21$potential == min(ANALISEfifa21$potential), NA)
+
+ANALISEfifa21[which(is.na(ANALISEfifa21$team)),c("name","team")]
+
+```
+
+---
+
+# Exercício 6:
+
+```{r}
+
+Laterais = filter(ANALISEfifa21, position == "LB" | position == "RB" )
+QntdLaterais = nrow(Laterais)
+
+#CÓDIGO USADO PARA O TEXTO:`r QntdLaterais`
+
+```
+Existem **`r QntdLaterais`** de jogadores que jogam na posição LB ou RB
+
+
+---
+
+# Exercício 7:
+```{r}
+brazil21 = ANALISEfifa21[ANALISEfifa21$nationality == "Brazil",]
+spain21 = ANALISEfifa21[ANALISEfifa21$nationality == "Spain",]
+```
+
+
+---
+
+# Exercício 8:
+
+```{r}
+QntdBrasil = nrow(brazil21)
+QntdEspanha = nrow(spain21)
+
+#CÓDIGO USADO PARA O TEXTO: `r QntdBrasil`,`r QntdEspanha`
+```
+O Brasil possui **`r QntdBrasil`** de jogadores no banco de dados
+A Espanha possui **`r QntdEspanha`** de jogadores no banco de dados
+
+
+---
+
+# Exercício 9:
+```{r}
+MediaGeralBR = mean(brazil21$overall,)
+MediaGeralEspanha = mean(spain21$overall,)
+
+#CÓDIGO USADO PARA O TEXTO:`r MediaGeralBR`, `r MediaGeralEspanha`
+```
+
+A média geral dos jogadores do Brasil é de **`r MediaGeralBR`**.
+A média geral dos jogadores da Espanha é de **`r MediaGeralEspanha`**.
+
+
+---
+
+# Exercício 10:
+
+
+```{r}
+ggplot(ANALISEfifa21,aes(age,overall))+
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Gráfico de disperção dos jogadores do FIFA 21",
+       x = "Idade",
+       y = "Overall")
+```
+
+Ao analisar o intervalo de **27 a 35 anos**, é possivel observar uma grande densidade de jogadores com classificação alta e um grande numero de pontos outlines, inferindo que esse seja o auge da carreira do jogador. De maneira análoga, os jogares que aparecem fora desse intervalo com pontos outlines se destacam por sua qualidade individual.
+
+
+
+
+

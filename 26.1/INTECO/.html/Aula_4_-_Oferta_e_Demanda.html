@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Adaptativo — Aula 4: Oferta e Demanda</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.72em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Oferta e Demanda</h1>
+<p>Quiz Adaptativo — Aula 4 · Introdução à Economia · UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreensão de <strong>mercado, demanda, oferta, equilíbrio e deslocamentos de curvas</strong> (Mankiw, Cap. 4).<br>Se errar, você receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Lucas vai à feira do Guará comprar frutas. Há dezenas de barracas vendendo as mesmas frutas — manga, banana, mamão — todas a preços muito parecidos.",texto:"O que caracteriza um mercado competitivo como essa feira?",alternativas:["Um único vendedor controla todos os preços","Há muitos compradores e vendedores, e nenhum individualmente influencia o preço","Os vendedores combinam os preços entre si","O governo determina quanto cada barraca pode cobrar"],correta:1,explicacao:"Em um <strong>mercado competitivo</strong>, há tantos compradores e vendedores que nenhum deles, sozinho, consegue influenciar o preço. O preço é determinado pela interação de todos no mercado."},
+{principio:1,tipo:"reforco",contexto:"No bairro de Ceilândia, existe apenas uma farmácia. Ela é a única opção para os moradores comprarem remédios.",texto:"Essa farmácia opera em um mercado competitivo?",alternativas:["Sim, porque vende para muitas pessoas","Não, porque há apenas um vendedor e ele pode influenciar o preço","Sim, porque o governo regula os preços dos remédios","Não, porque remédios não são bens de mercado"],correta:1,explicacao:"<strong>Não é competitivo</strong> porque há apenas um vendedor (monopólio). Para ser competitivo, é preciso haver <strong>muitos</strong> vendedores e compradores, de modo que nenhum individualmente influencie o preço."},
+{principio:2,tipo:"principal",contexto:"Na feira do Plano Piloto, o litro de açaí subiu de R$ 15 para R$ 25 nas últimas semanas.",texto:"De acordo com a lei da demanda, o que acontece com a quantidade demandada de açaí?",alternativas:["Aumenta, porque as pessoas valorizam mais o que é caro","Não muda, porque açaí é essencial","Diminui, pois quando o preço sobe a quantidade demandada cai","Depende da oferta, não tem relação com o preço"],correta:2,explicacao:"A <strong>lei da demanda</strong> diz: quando o preço de um bem sobe (tudo o mais constante), a quantidade demandada diminui. Menos pessoas estão dispostas a pagar R$ 25 do que R$ 15 pelo litro de açaí."},
+{principio:2,tipo:"principal",contexto:"Imagine o gráfico de demanda por coxinhas em uma lanchonete de Taguatinga.",texto:"Qual dos fatores abaixo NÃO desloca a curva de demanda?",alternativas:["Um aumento na renda dos consumidores","Uma mudança no preço do próprio bem","Uma campanha de TV elogiando coxinhas","O preço de um bem substituto (pastel) cai"],correta:1,explicacao:"Uma mudança no <strong>preço do próprio bem</strong> causa um <strong>movimento ao longo</strong> da curva de demanda, não um deslocamento. Deslocamentos são causados por mudanças em <strong>outros fatores</strong>: renda, preferências, preços de bens relacionados, expectativas ou número de compradores."},
+{principio:2,tipo:"reforco",contexto:"Carlos toma café com leite toda manhã. Café e leite são bens complementares — ele consome os dois juntos.",texto:"Se o preço do café sobe muito, o que acontece com a demanda por leite?",alternativas:["Aumenta, porque leite substitui o café","Diminui, porque são complementares — se consome menos café, consome menos leite também","Não muda, porque são produtos diferentes","Aumenta, porque leite fica relativamente mais barato"],correta:1,explicacao:"Café e leite são <strong>complementares</strong>: são consumidos juntos. Se o café fica caro e as pessoas compram menos café, a demanda por leite também <strong>cai</strong> (a curva de demanda do leite desloca para a esquerda)."},
+{principio:3,tipo:"principal",contexto:"Dona Marta vende quentinhas no Recanto das Emas. Ela usa gás de cozinha para preparar as refeições. O preço do botijão de gás subiu de R$ 100 para R$ 140.",texto:"O que acontece com a oferta de quentinhas da Dona Marta?",alternativas:["A oferta aumenta, porque ela precisa vender mais para pagar o gás","A curva de oferta se desloca para a esquerda — a oferta diminui","Nada muda, porque o gás não é uma quentinha","A curva de oferta se desloca para a direita"],correta:1,explicacao:"O gás é um <strong>insumo</strong> (custo de produção). Quando o preço de um insumo sobe, produzir fica mais caro. A <strong>curva de oferta se desloca para a esquerda</strong>: para cada preço, Dona Marta oferece menos quentinhas."},
+{principio:3,tipo:"principal",contexto:"Pense no gráfico de oferta de um produto qualquer.",texto:"Qual a diferença entre um movimento ao longo da curva de oferta e um deslocamento da curva?",alternativas:["Não há diferença, são a mesma coisa","Movimento = mudança no preço do próprio bem; deslocamento = mudança em outro fator (tecnologia, custos, etc.)","Movimento = mudança na demanda; deslocamento = mudança na oferta","Deslocamento = mudança no preço do bem; movimento = mudança nos custos"],correta:1,explicacao:"<strong>Movimento ao longo</strong> da curva: causado por mudança no preço do próprio bem. <strong>Deslocamento</strong> da curva: causado por mudança em outro fator — tecnologia, preço dos insumos, expectativas, número de vendedores, etc."},
+{principio:3,tipo:"reforco",contexto:"Uma padaria do Gama adquiriu um forno novo e mais eficiente, que assa o dobro de pães usando a mesma quantidade de farinha e energia.",texto:"O que acontece com a oferta de pão dessa padaria?",alternativas:["Diminui, porque o forno foi caro","Aumenta — a curva de oferta se desloca para a direita, preço tende a cair e quantidade a subir","Não muda, porque o preço do pão não mudou","A demanda é que muda, não a oferta"],correta:1,explicacao:"Uma <strong>melhoria tecnológica</strong> reduz o custo de produção. A padaria consegue produzir mais pão com os mesmos recursos. A <strong>curva de oferta se desloca para a direita</strong>: mais oferta → preço tende a cair e quantidade a aumentar."},
+{principio:4,tipo:"principal",contexto:"Seu Jorge vende quentinhas a R$ 20 cada. Porém, ao preço de R$ 15 a quantidade demandada seria igual à quantidade ofertada — ou seja, o equilíbrio é R$ 15.",texto:"Se Seu Jorge está cobrando R$ 20, o que acontece no mercado?",alternativas:["Há excesso de demanda e o preço tende a subir","Há excesso de oferta e o preço tende a cair","O mercado está em equilíbrio","Não dá para saber sem mais informações"],correta:1,explicacao:"Com preço <strong>acima do equilíbrio</strong> (R$ 20 > R$ 15), a quantidade ofertada é maior que a demandada. Resultado: <strong>excesso de oferta</strong> (sobram quentinhas). A pressão do mercado faz o preço <strong>cair</strong> até o equilíbrio."},
+{principio:4,tipo:"principal",contexto:"Considere o gráfico de oferta e demanda de qualquer mercado.",texto:"No gráfico de oferta e demanda, o equilíbrio é o ponto onde...",alternativas:["A curva de oferta está no ponto mais alto","O preço é o mais baixo possível","A quantidade demandada é igual à quantidade ofertada","Os consumidores estão mais satisfeitos"],correta:2,explicacao:"O <strong>equilíbrio</strong> é o ponto onde as curvas de oferta e demanda se cruzam. Nesse ponto, a <strong>quantidade que os consumidores querem comprar</strong> é exatamente igual à <strong>quantidade que os produtores querem vender</strong>. Não há excesso nem escassez."},
+{principio:4,tipo:"reforco",contexto:"No Mercado Central de Brasília, o preço do tomate está abaixo do equilíbrio. Muitas pessoas querem comprar, mas os produtores oferecem pouco a esse preço baixo.",texto:"O que acontece quando o preço está abaixo do equilíbrio?",alternativas:["Há excesso de oferta e o preço cai","Há excesso de demanda (escassez) e o preço tende a subir","O mercado fica estável","Os produtores aumentam a produção imediatamente"],correta:1,explicacao:"Com preço <strong>abaixo do equilíbrio</strong>, a quantidade demandada supera a ofertada: há <strong>escassez</strong>. Compradores competem pelo produto escasso, pressionando o preço <strong>para cima</strong>, até que se atinja o equilíbrio."},
+{principio:5,tipo:"principal",contexto:"Uma nova fábrica de autopeças abriu no Gama, trazendo 500 trabalhadores e suas famílias para o bairro. Agora tem muito mais gente almoçando nos restaurantes locais.",texto:"O que acontece no mercado de quentinhas do Gama?",alternativas:["A oferta aumenta e o preço cai","A demanda diminui porque há mais concorrência","A demanda aumenta (desloca para a direita), preço e quantidade de equilíbrio sobem","Nada muda, porque a fábrica não produz quentinhas"],correta:2,explicacao:"Mais trabalhadores = mais consumidores = <strong>aumento da demanda</strong>. A curva de demanda se desloca para a direita. No novo equilíbrio, tanto o <strong>preço</strong> quanto a <strong>quantidade</strong> de quentinhas são maiores."},
+{principio:5,tipo:"reforco",contexto:"O governo proibiu a importação de um determinado insumo, fazendo o custo de produção de camisetas subir. Ao mesmo tempo, uma novela famosa lançou moda de camisetas estampadas, aumentando o desejo dos consumidores.",texto:"O que acontece com o preço e a quantidade de equilíbrio de camisetas?",alternativas:["O preço certamente sobe, mas o efeito na quantidade é ambíguo","O preço cai e a quantidade sobe","O preço e a quantidade certamente sobem","Nada muda, os efeitos se cancelam"],correta:0,explicacao:"A oferta diminui (custo maior → desloca para esquerda) e a demanda aumenta (moda → desloca para direita). Ambos os efeitos pressionam o <strong>preço para cima</strong>. Porém, a oferta empurra a quantidade para baixo enquanto a demanda empurra para cima — o efeito final na <strong>quantidade é ambíguo</strong>, depende de qual deslocamento é maior."}
+];
+var NOMES={1:"Mercado",2:"Demanda",3:"Oferta",4:"Equilíbrio",5:"Deslocamentos"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=5;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=5;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem as forças de oferta e demanda.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e o Capítulo 4 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=5;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Releia a definição de mercado competitivo: muitos compradores e vendedores, nenhum individualmente influencia o preço. Compare com monopólio (um vendedor) e oligopólio (poucos).",2:"Revise a lei da demanda (preço sobe → quantidade demandada cai) e a diferença entre MOVIMENTO ao longo da curva (mudança no preço do bem) e DESLOCAMENTO da curva (mudança em renda, preferências, preços de bens relacionados).",3:"Revise a lei da oferta (preço sobe → quantidade ofertada sobe) e os fatores que deslocam a curva de oferta: preço dos insumos, tecnologia, expectativas e número de vendedores.",4:"Pratique identificar excesso de oferta (preço acima do equilíbrio) e excesso de demanda (preço abaixo). Lembre-se: o equilíbrio é onde Qd = Qs.",5:"Pratique os três passos: (1) identifique se o choque afeta oferta ou demanda, (2) determine a direção do deslocamento, (3) compare o novo equilíbrio com o antigo. Quando ambas as curvas se deslocam, um dos efeitos (preço ou quantidade) será ambíguo."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

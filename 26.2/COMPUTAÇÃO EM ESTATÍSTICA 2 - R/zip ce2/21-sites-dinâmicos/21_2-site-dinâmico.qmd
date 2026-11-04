@@ -1,0 +1,132 @@
+---
+title: "Web Scraping (Aula 2): Sites Dinâmicos"
+subtitle: "Computação em Estatística II: R"
+author: "Prof. Donald M. Pianto"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    scrollable: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## 1. O Problema: Sites Dinâmicos
+
+Na última aula, fizemos scraping de um ficheiro `starwars.html`. O conteúdo estava todo no ficheiro.
+
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rvest)
+```
+
+No entanto, muitos sites modernos (Twitter, Facebook, apps de e-commerce) carregam o seu conteúdo *depois* que a página é aberta, usando JavaScript.
+
+Vamos tentar raspar a versão **dinâmica** da página Star Wars que vimos: `https://rvest.tidyverse.org/articles/starwars-dynamic.html`.
+
+---
+
+### 1.1 A Falha do `read_html()`
+
+Vamos usar o método da última aula. Usaremos os mesmos seletores que funcionaram perfeitamente antes.
+
+```{r}
+# A URL do site dinâmico
+url_dinamica <- "https://rvest.tidyverse.org/articles/starwars-dynamic.html"
+
+# Ler o HTML com a função padrão
+html_estatico <- read_html(url_dinamica)
+
+# Tentar extrair os títulos
+titulos <- html_estatico |> 
+  html_elements("h2[data-id]") |> 
+  html_text2()
+
+titulos
+```
+
+**Resultado:** `character(0)`. O vetor está vazio!
+
+**Porquê?** O `read_html()` baixou o HTML original, que não continha os títulos. O JavaScript que os insere não foi executado.
+
+---
+
+## 2. A Solução: `read_html_live()`
+
+Para raspar sites dinâmicos, precisamos de uma ferramenta que se comporte como um navegador: que baixe o HTML, execute o JavaScript e *espere* o conteúdo aparecer.
+
+Para isso, usamos a função `rvest::read_html_live()`.
+
+*(Nota: Na primeira vez que executar, pode demorar um pouco para iniciar o navegador em segundo plano).*
+
+```{r}
+# 1. Conectar-se ao site usando uma sessão "live"
+# Isto abre um navegador "headless" (invisível)
+sessao <- read_html_live(url_dinamica)
+```
+
+---
+
+### 2.2 Raspando da Sessão "Live"
+
+Agora que o conteúdo está na página, podemos aplicar as funções `html_elements` e `html_text2` **diretamente no objeto `sessao`**, como se ele fosse o HTML.
+
+```{r}
+# Agora, os mesmos seletores da última aula funcionam!
+titulos <- sessao |> 
+  html_elements("h2[data-id]") |> 
+  html_text2()
+
+titulos
+```
+
+O resultado aparece corretamente!
+
+---
+
+## 3. Estudo de Caso Completo (Dinâmico)
+
+Vamos repetir todo o processo da última aula, mas usando `read_html_live()` e a `sessao`.
+
+```{r}
+# 1. Conectar e esperar pelo conteúdo
+url_dinamica <- "https://rvest.tidyverse.org/articles/starwars-dynamic.html"
+sessao <- read_html_live(url_dinamica)
+
+# sessao$wait_for_selector("h2[data-id]")
+
+# 2. Extrair títulos (já sabemos que funciona)
+titulos <- sessao |> 
+  html_elements("h2[data-id]") |> 
+  html_text2()
+
+# 3. Extrair parágrafos
+paragrafos_texto <- sessao |> 
+  html_elements("section > p") |> 
+  html_text2()
+
+# 4. Separar datas e diretores (stringr)
+datas <- paragrafos_texto |> 
+  str_subset("^Released: ") |> 
+  str_remove("Released: ") |> 
+  str_trim()
+
+diretores <- paragrafos_texto |> 
+  str_subset("^Director: ") |> 
+  str_remove("Director: ") |> 
+  str_trim()
+
+# 5. Juntar tudo no tibble
+star_wars_df <- tibble(
+  titulo = titulos,
+  diretor = diretores,
+  data_lancamento = as.Date(datas)
+)
+
+star_wars_df
+```

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Adaptativo — Aula 6: Mercados e Bem-Estar</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.72em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Mercados e Bem-Estar</h1>
+<p>Quiz Adaptativo — Aula 6 · Introdução à Economia · UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreensão de <strong>excedente do consumidor, excedente do produtor, eficiência de mercado e falhas de mercado</strong> (Mankiw, Cap. 7-8).<br>Se errar, você receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Imagine que você está em uma loja e vê um produto que deseja. Quanto você estaria disposto a pagar no máximo por ele?",texto:"A \"disposição a pagar\" (DAP) é:",alternativas:["O preço de mercado do bem","O valor máximo que o comprador pagaria pelo bem","O custo de produção do bem","O lucro do vendedor"],correta:1,explicacao:"A DAP mede quanto o comprador <strong>valoriza</strong> o bem. É o preço máximo que ele aceitaria pagar — acima disso, ele prefere não comprar."},
+{principio:1,tipo:"principal",contexto:"Ana quer comprar um celular novo. Ela valoriza o aparelho em R$500, mas encontra na loja por R$380.",texto:"Se a DAP de Ana é R$500 e ela compra o produto por R$380, seu excedente do consumidor é:",alternativas:["R$500","R$380","R$120","R$880"],correta:2,explicacao:"EC = DAP − Preço = 500 − 380 = <strong>R$120</strong>. Esse é o ganho que Ana obtém por comprar o bem abaixo do máximo que estaria disposta a pagar."},
+{principio:1,tipo:"principal",contexto:"O excedente do consumidor pode ser visualizado em um gráfico de oferta e demanda. A curva de demanda mostra a DAP de cada consumidor.",texto:"O excedente do consumidor é representado graficamente pela área:",alternativas:["Abaixo da curva de oferta e acima do preço","Acima da curva de demanda e abaixo do preço","Abaixo da curva de demanda e acima do preço","Entre as curvas de oferta e demanda"],correta:2,explicacao:"EC = área entre a curva de demanda (que mostra a DAP de cada consumidor) e a linha de preço. <strong>Abaixo da demanda e acima do preço</strong>."},
+{principio:1,tipo:"reforco",contexto:"Quando o preço de mercado cai, consumidores que já compravam pagam menos, e novos consumidores passam a comprar.",texto:"Quando o preço de mercado cai, o excedente do consumidor:",alternativas:["Diminui","Aumenta","Não se altera","Depende da oferta"],correta:1,explicacao:"Preço menor → consumidores existentes ganham mais (pagam menos pelo mesmo bem) + novos consumidores entram no mercado → EC <strong>sobe</strong>."},
+{principio:2,tipo:"principal",contexto:"Assim como o consumidor tem um ganho ao comprar abaixo da sua DAP, o produtor tem um ganho ao vender acima do seu custo.",texto:"O excedente do produtor é:",alternativas:["O lucro contábil da empresa","A diferença entre o preço recebido e o custo de produção","O valor total das vendas","O salário do trabalhador"],correta:1,explicacao:"EP = Preço − Custo. Mede o <strong>benefício do vendedor</strong> ao participar do mercado. Não confunda com lucro contábil, que desconta custos fixos."},
+{principio:2,tipo:"principal",contexto:"Marta e Rosa vendem bolos na feira. Marta produz cada bolo a R$15 e Rosa a R$25. Ambas vendem a R$30.",texto:"O excedente do produtor total de Marta e Rosa é:",alternativas:["R$30","R$20","R$45","R$10"],correta:1,explicacao:"Marta: 30−15 = R$15. Rosa: 30−25 = R$5. Total: 15 + 5 = <strong>R$20</strong>."},
+{principio:2,tipo:"principal",contexto:"Graficamente, o excedente do produtor também aparece como uma área no gráfico de oferta e demanda.",texto:"O excedente do produtor é representado pela área:",alternativas:["Abaixo da curva de oferta e acima do preço","Acima da curva de oferta e abaixo do preço","Abaixo da curva de demanda e acima do preço","Acima da curva de demanda"],correta:1,explicacao:"EP = área entre o preço (acima) e a curva de oferta (abaixo). A curva de oferta mostra o custo de cada produtor, e o preço é o que eles recebem."},
+{principio:2,tipo:"reforco",contexto:"Quando o preço de mercado sobe, produtores existentes ganham mais e novos produtores são atraídos para o mercado.",texto:"Quando o preço de mercado sobe, o excedente do produtor:",alternativas:["Diminui","Aumenta","Não se altera","Depende da demanda"],correta:1,explicacao:"Preço maior → produtores existentes recebem mais (vendem acima do custo por uma margem maior) + novos produtores entram → EP <strong>sobe</strong>."},
+{principio:3,tipo:"principal",contexto:"O excedente total mede o ganho de toda a sociedade com as trocas realizadas no mercado.",texto:"O excedente total é:",alternativas:["Apenas o excedente do consumidor","Apenas o excedente do produtor","EC + EP","EC − EP"],correta:2,explicacao:"Excedente Total = EC + EP = <strong>ganhos totais da troca</strong> no mercado. Mede o bem-estar econômico gerado pelas transações."},
+{principio:3,tipo:"principal",contexto:"Adam Smith argumentou que mercados competitivos, sem intervenção, tendem a gerar resultados desejáveis para a sociedade.",texto:"O equilíbrio de mercado competitivo:",alternativas:["Minimiza o excedente total","Maximiza o excedente total","Beneficia apenas os consumidores","Beneficia apenas os produtores"],correta:1,explicacao:"No equilíbrio, bens vão para quem mais valoriza e são produzidos por quem tem menor custo → excedente total <strong>máximo</strong>. Essa é a eficiência do mercado competitivo."},
+{principio:3,tipo:"principal",contexto:"Na obra \"A Riqueza das Nações\" (1776), Adam Smith usou uma metáfora famosa para descrever como mercados livres funcionam.",texto:"A \"mão invisível\" de Adam Smith se refere a:",alternativas:["A intervenção do governo na economia","A tendência de mercados competitivos gerarem resultados eficientes","O poder dos monopólios","A inflação"],correta:1,explicacao:"Compradores e vendedores, buscando seu <strong>próprio interesse</strong>, são guiados — como por uma mão invisível — a maximizar o bem-estar total da sociedade."},
+{principio:3,tipo:"reforco",contexto:"A eficiência de mercado significa que o excedente total é o maior possível. Mas isso não garante que a distribuição seja justa.",texto:"Um mercado eficiente garante que:",alternativas:["A renda é distribuída igualmente","O excedente total é maximizado","Todos os consumidores pagam o mesmo preço","O governo não precisa existir"],correta:1,explicacao:"Eficiência significa que <strong>não é possível melhorar a situação de alguém sem piorar a de outro</strong>. O excedente total é máximo, mas a distribuição pode ser desigual."},
+{principio:4,tipo:"principal",contexto:"Uma fábrica de papel despeja resíduos em um rio, prejudicando pescadores e moradores da região.",texto:"Qual das opções é um exemplo de externalidade negativa?",alternativas:["Uma fábrica que polui um rio","Um restaurante que cobra caro","Uma pessoa que compra um carro novo","Um banco que paga juros"],correta:0,explicacao:"A poluição impõe custos a <strong>terceiros</strong> (pescadores, moradores) que não estão refletidos no preço do produto da fábrica. Isso é uma <strong>externalidade negativa</strong>."},
+{principio:4,tipo:"principal",contexto:"Alguns bens têm características especiais que impedem o mercado de fornecê-los adequadamente.",texto:"Bens públicos são aqueles que:",alternativas:["São vendidos pelo governo","São não-excludentes e não-rivais","São produzidos apenas por empresas estatais","Têm demanda inelástica"],correta:1,explicacao:"<strong>Não-excludente</strong> = não dá para impedir ninguém de usar. <strong>Não-rival</strong> = o uso por um não reduz o uso por outro. Ex: iluminação pública, defesa nacional."},
+{principio:4,tipo:"principal",contexto:"George Akerlof ganhou o Nobel estudando o mercado de carros usados, onde uma das partes sabe mais que a outra.",texto:"O problema do \"carro usado\" (informação assimétrica) ocorre porque:",alternativas:["Carros usados são sempre ruins","O vendedor sabe mais sobre o carro do que o comprador","O governo não regula o mercado","Não há demanda por carros usados"],correta:1,explicacao:"O vendedor conhece os defeitos; o comprador não. Isso pode levar a mau funcionamento do mercado — o chamado <strong>\"mercado de limões\"</strong>, onde carros bons saem do mercado."},
+{principio:4,tipo:"reforco",contexto:"Quando o mercado falha, pode haver justificativa para intervenção do governo — mas a intervenção também pode falhar.",texto:"As falhas de mercado incluem:",alternativas:["Externalidades, bens públicos e informação assimétrica","Apenas monopólios","Apenas poluição","Nenhuma das alternativas — mercados nunca falham"],correta:0,explicacao:"As principais falhas de mercado são: <strong>externalidades</strong> (custos/benefícios a terceiros), <strong>bens públicos</strong> (não-excludentes e não-rivais) e <strong>informação assimétrica</strong> (uma parte sabe mais que a outra). Em todos esses casos, o mercado sozinho não maximiza o excedente total."}
+];
+var NOMES={1:"Exc. Consumidor",2:"Exc. Produtor",3:"Eficiência",4:"Falhas de Mercado"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=4;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=4;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem mercados e bem-estar.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e os Capítulos 7-8 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=4;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise o excedente do consumidor: EC = Disposição a Pagar − Preço. Graficamente, é a área abaixo da curva de demanda e acima do preço. Quando o preço cai, o EC aumenta.",2:"Revise o excedente do produtor: EP = Preço − Custo. Graficamente, é a área acima da curva de oferta e abaixo do preço. Quando o preço sobe, o EP aumenta.",3:"Revise eficiência de mercado: Excedente Total = EC + EP. O equilíbrio competitivo maximiza o excedente total. A \"mão invisível\" de Adam Smith descreve como mercados livres geram eficiência.",4:"Revise falhas de mercado: externalidades (custos/benefícios a terceiros), bens públicos (não-excludentes e não-rivais) e informação assimétrica (\"mercado de limões\"). Nesses casos, o mercado sozinho não é eficiente."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

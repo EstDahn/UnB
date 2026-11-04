@@ -1,0 +1,320 @@
+---
+title: "Advanced R, 2ª Edição: Resumo do Capítulo 6"
+subtitle: "Funções"
+author: "Resumido por Gemini (baseado em Hadley Wickham)"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-fold: false
+execute:
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Funções são um bloco de construção fundamental em R. Para dominar técnicas mais avançadas, é preciso ter uma base sólida de como as funções funcionam. O mais importante a se entender sobre R é que **funções são objetos** por si sós.
+
+## Componentes de uma função
+
+Toda função em R tem três partes:
+
+1.  O `body()`: o código dentro da função.
+2.  Os `formals()`: a lista de argumentos que controla como você pode chamar a função.
+3.  O `environment()`: a estrutura de dados que determina como a função encontra os valores associados aos nomes (escopo).
+
+```{r}
+f01 <- function(x, y) {
+  # Um comentário
+  x + y
+}
+
+formals(f01)
+body(f01)
+environment(f01)
+```
+
+Como todos os objetos em R, funções também podem ter `attributes()`. Um atributo comum, usado pelo R base, é o `srcref` (source reference), que aponta para o código fonte usado para criar a função e inclui comentários.
+
+```{r}
+attr(f01, "srcref")
+```
+
+### Funções Primitivas
+
+Existe uma exceção à regra acima: funções primitivas, como `sum()`. Elas são implementadas puramente em C e não possuem os três componentes.
+
+```{r}
+sum
+`[`
+```
+
+## Escopo Lexical
+
+R usa um sistema chamado **escopo lexical**. Isso significa que a forma como R encontra valores baseia-se em como a função foi definida, não em como ela é chamada. O escopo determina onde procurar por um valor.
+
+Quando você se refere a um nome (ou símbolo) dentro de uma função, R o procura na seguinte ordem:
+
+1.  No **ambiente atual** da função.
+2.  Se não for encontrado, ele sobe para o **ambiente pai**, e assim por diante, até chegar ao ambiente global.
+3.  A busca continua pelos pacotes carregados até o ambiente base.
+
+```{r}
+x <- 1
+y <- 2
+f <- function() {
+  x + y
+}
+
+f()
+```
+O ambiente de uma função é o ambiente onde ela foi criada.
+
+### Princípios do Escopo Lexical
+
+1.  **Mascaramento de Nomes (Name Masking):** Se um nome existe em múltiplos ambientes, R usará o primeiro que encontrar, "mascarando" os outros.
+
+    ```{r}
+    x <- 10
+    g <- function() {
+      x <- 20
+      x
+    }
+    
+    g()
+    x
+    ```
+
+2.  **Funções vs. Variáveis:** Nomes de funções são tratados da mesma forma que variáveis. Se você tem uma função e uma variável com o mesmo nome, R seguirá as regras de escopo para encontrar qual usar.
+
+3.  **Um Novo Começo (A Fresh Start):** O que acontece dentro de uma função permanece dentro dela. Toda vez que uma função é chamada, um novo ambiente é criado para armazenar a execução.
+
+    ```{r, error=TRUE}
+    f <- function() {
+      x <- 10
+    }
+    f()
+    x # 'x' não existe no ambiente global
+    ```
+
+4.  **Busca Dinâmica (Dynamic Lookup):** R busca por valores quando a função é executada, não quando é criada. Isso significa que se o valor de uma variável global mudar entre a definição e a chamada da função, a função usará o valor mais recente.
+
+    ```{r}
+    x <- 10
+    f <- function() {
+      x
+    }
+    
+    x <- 20
+    f()
+    ```
+
+### Encontrando Globais
+
+A função `codetools::findGlobals()` pode listar as dependências externas (variáveis globais) de uma função.
+
+```{r}
+library(codetools)
+f <- function(x = 1) {
+  y <- 2
+  x + y + z
+}
+findGlobals(f)
+```
+
+## Argumentos de Funções
+
+Esta seção explora como os argumentos são passados para uma função e avaliados.
+
+### Correspondência de Argumentos (Argument Matching)
+
+Quando você chama uma função, R tenta corresponder os argumentos que você fornece com os `formals` da função usando um processo de três passos:
+
+1.  **Correspondência por nome exato.**
+2.  **Correspondência por nome parcial.**
+3.  **Correspondência por posição.**
+
+```{r}
+f <- function(long_argument_name, another) {
+  long_argument_name + another
+}
+# Correspondência por posição e nome exato
+f(long_argument_name = 1, another = 2)
+
+# Correspondência por nome parcial e posição
+f(another = 2, long = 1)
+```
+
+É uma boa prática evitar nomes de argumentos que são prefixos de outros.
+
+```{r, error=TRUE}
+f <- function(ab, abc) {}
+# f(a = 1, b = 2) # Ambiguidade gera um erro
+```
+
+Você pode ver os argumentos de uma função com `args()`.
+
+```{r}
+args(f)
+args(mean)
+```
+### Argumentos Padrão
+
+Os argumentos de uma função podem ter valores padrão.
+
+```{r}
+f <- function(x = 1, y = 2) {
+  c(x, y)
+}
+f()
+f(x = 10)
+```
+Os valores padrão podem ser definidos em termos de outras variáveis, inclusive aquelas criadas anteriormente na lista de argumentos.
+
+```{r}
+g <- function(x = 1, y = x * 2, z = a + b) {
+  a <- 10
+  b <- 100
+  c(x, y, z)
+}
+g()
+```
+
+### Verificando Argumentos Faltantes
+
+A função `missing()` permite verificar se um argumento foi fornecido pelo usuário.
+
+```{r}
+h <- function(x = 10, y) {
+  if (missing(y)) {
+    "y está faltando"
+  } else {
+    x + y
+  }
+}
+h()
+h(y = 20)
+```
+
+### Avaliação Preguiçosa (Lazy Evaluation)
+
+Argumentos em R são avaliados de forma "preguiçosa" (lazy). Eles só são computados quando são realmente usados pela primeira vez dentro da função.
+
+```{r}
+f <- function(x) {
+  10
+}
+f(stop("Este é um erro!")) # Nenhum erro, pois 'x' nunca é usado.
+```
+Isso permite criar funções com comportamento interessante, como valores padrão que só são calculados quando necessário.
+
+### `...` (Dot-Dot-Dot)
+
+O argumento especial `...` captura qualquer número de argumentos que não foram correspondidos por outros `formals`.
+
+```{r}
+commas <- function(...) {
+  stringr::str_c(..., collapse = ", ")
+}
+commas("a", "b", "c")
+```
+Para usar os argumentos capturados por `...`, você geralmente os passa para outra função.
+
+```{r}
+rule <- function(..., pad = "-") {
+  title <- commas(...)
+  width <- getOption("width") - nchar(title) - 5
+  cat(title, " ", stringr::str_dup(pad, width), "\n", sep = "")
+}
+rule("Resultados Importantes")
+```
+
+### Valores de Retorno
+
+O valor de retorno de uma função é geralmente o resultado da última expressão avaliada no corpo da função.
+
+### Retorno Implícito vs. Explícito
+
+```{r}
+# Retorno implícito (o resultado de x + y)
+f1 <- function(x, y) {
+  x + y
+}
+
+# Retorno explícito com return()
+f2 <- function(x, y) {
+  return(x + y)
+}
+
+f1(1, 2)
+f2(1, 2)
+```
+`return()` é útil para saídas antecipadas.
+
+```{r}
+complicated_function <- function(x, y, z) {
+  if (length(x) == 0 || length(y) == 0) {
+    return(0)
+  }
+  # Código complicado aqui...
+  10
+}
+```
+
+### Ações de Saída (Exit Handlers)
+
+A função `on.exit()` permite que você execute um bloco de código sempre que a função sair, seja por um retorno normal, um erro ou uma saída antecipada.
+
+```{r}
+f <- function(path) {
+  on.exit(message("Limpando..."), add = TRUE)
+  
+  if (!file.exists(path)) {
+    stop("O arquivo não existe")
+  }
+  
+  message("Fazendo algo...")
+}
+
+# f("caminho/para/arquivo.txt") # Descomente para testar
+```
+
+## Formas de Função
+
+Funções em R podem ser chamadas de diferentes maneiras: como prefixo, infixo ou de substituição.
+
+### Funções Infixas
+
+A maioria das funções em R são de prefixo. Funções infixas aparecem entre seus argumentos, como `+` ou `-`. Você pode criar suas próprias funções infixas envolvendo o nome entre `%`.
+
+```{r}
+`%+%` <- function(a, b) paste0(a, b)
+"Olá" %+% " mundo"
+```
+A forma prefixo de uma função infixa pode ser chamada usando aspas.
+```{r}
+`+`(1, 2)
+`%+%`("Olá", " mundo")
+```
+
+### Funções de Substituição (Replacement Functions)
+
+Funções de substituição parecem modificar seus argumentos no lugar. Elas têm a sintaxe `xxx(a) <- b` e são, na verdade, chamadas de função disfarçadas: `` `<-`(`xxx`(a), b) ``. Elas devem ter argumentos chamados `x` e `value`.
+
+```{r}
+# Exemplo de uma função que modifica o segundo elemento
+`second<-` <- function(x, value) {
+  x[2] <- value
+  x
+}
+
+x <- 1:5
+second(x) <- 10
+x
+```

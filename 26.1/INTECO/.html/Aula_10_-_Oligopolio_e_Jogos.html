@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz - Aula 10: Oligopólio e Teoria dos Jogos</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.72em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Oligopólio e Teoria dos Jogos</h1>
+<p>Quiz Adaptativo — Aula 10 · Introdução à Economia · UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreensão de <strong>oligopólio, dilema do prisioneiro, equilíbrio de Nash e políticas antitruste</strong> (Mankiw, Cap. 17).<br>Se errar uma questão principal, você receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Estruturas de mercado: concorrência perfeita (muitas firmas), concorrência monopolística (muitas com diferenciação), oligopólio (poucas firmas), monopólio (uma).",texto:"O setor brasileiro de telefonia móvel (Vivo, Claro, TIM) é melhor classificado como:",alternativas:["Concorrência perfeita","Concorrência monopolística","Oligopólio","Monopólio"],correta:2,explicacao:"Apenas <strong>3 grandes firmas</strong> dominam quase todo o mercado, com barreiras altas (espectro, infraestrutura, regulação). É um <strong>oligopólio</strong> clássico."},
+{principio:1,tipo:"principal",contexto:"Oligopólio: poucas firmas, produtos similares ou idênticos, barreiras à entrada. Cada firma é grande o bastante para afetar preço e influenciar rivais.",texto:"Qual destas características NÃO é típica de oligopólio?",alternativas:["Poucas firmas dominantes","Barreiras à entrada (custo fixo, regulação)","Decisões interdependentes entre firmas","Preço igual ao custo marginal"],correta:3,explicacao:"Preço igual ao custo marginal é a característica da <strong>concorrência perfeita</strong>. Em oligopólio, as firmas têm poder de mercado e cobram <strong>acima</strong> do custo marginal."},
+{principio:1,tipo:"principal",contexto:"No Brasil: cervejas (Ambev ~60%), bancos (5 maiores ~80%), telefonia (3 grandes), aviação (Latam, Gol, Azul), refrigerantes (Coca, Pepsi/Ambev).",texto:"Por que tantos setores brasileiros são oligopólios? A razão MAIS importante é:",alternativas:["O governo proíbe novas empresas","Existem barreiras à entrada (custos fixos altos, regulação, marca, redes)","Os consumidores não querem mais firmas","O Brasil é um país pequeno"],correta:1,explicacao:"<strong>Barreiras à entrada</strong> (custo fixo bilionário para abrir banco/cervejaria, regulação do BC, marcas consolidadas, redes) impedem que novas firmas concorram com as existentes."},
+{principio:1,tipo:"reforco",contexto:"Estrutura de mercado depende do número de firmas e das barreiras. Restaurantes em uma cidade = muitos com diferenciação = concorrência monopolística.",texto:"O mercado de restaurantes no Plano Piloto é melhor classificado como:",alternativas:["Monopólio","Oligopólio","Concorrência monopolística (muitos com diferenciação)","Concorrência perfeita"],correta:2,explicacao:"Há <strong>muitos</strong> restaurantes (não é oligopólio), mas cada um se diferencia por cardápio, ambiente, localização. É <strong>concorrência monopolística</strong>."},
+{principio:2,tipo:"principal",contexto:"Em duopólio com cartel: produzir pouco mantém preço alto, lucro alto para ambos. Mas cada firma tem incentivo a desviar e produzir mais.",texto:"Quando duas firmas formam um cartel e dividem o lucro de monopólio, o que cada uma é tentada a fazer?",alternativas:["Cumprir o acordo, pois é justo","Trair o acordo produzindo mais que o combinado, ganhando lucro maior individualmente","Sair do mercado","Reduzir preço para ganhar todos os clientes do outro"],correta:1,explicacao:"O cartel é frágil porque cada firma <strong>individualmente</strong> ganha mais traindo (produzindo mais com preço ainda alto). Se ambas pensam assim, o cartel colapsa e o preço cai."},
+{principio:2,tipo:"principal",contexto:"Cartel é um acordo entre firmas concorrentes para fixar preços, dividir mercado ou restringir produção. No Brasil, é crime (Lei 12.529/2011).",texto:"Por que cartéis são considerados prejudiciais ao bem-estar social?",alternativas:["Porque firmas grandes não merecem lucro","Porque elevam preços e reduzem quantidades, gerando peso morto (como monopólio)","Porque são raros","Porque não pagam impostos"],correta:1,explicacao:"Um cartel imita o comportamento de monopólio: <strong>produz menos, cobra mais, gera peso morto</strong>. O excedente do consumidor cai e há ineficiência. Por isso a lei pune."},
+{principio:2,tipo:"reforco",contexto:"O cartel do cimento (2014) foi multado em R$3,1 bi pelo CADE — 6 grupos combinavam preços e dividiam regiões.",texto:"Em um cartel típico, quando uma firma reduz secretamente o preço para um cliente grande, ela está:",alternativas:["Ajudando o cartel","Traindo o acordo (ganho individual à custa dos demais)","Cumprindo a lei","Reduzindo seu lucro voluntariamente"],correta:1,explicacao:"Descontos secretos são uma forma típica de <strong>traição</strong> dentro do cartel: a firma ganha clientes enquanto as outras mantêm preço alto. Quando descobertas, geralmente desencadeia retaliação."},
+{principio:3,tipo:"principal",contexto:"Dilema do Prisioneiro: ambos calar = 1 ano cada; ambos confessar = 8 anos cada; um confessa e outro cala = 0 e 20 anos. Cada jogador decide em separado.",texto:"No dilema do prisioneiro padrão, qual é a estratégia dominante de cada jogador?",alternativas:["Sempre calar","Sempre confessar (trair)","Depende do que o outro fez","Não há estratégia dominante"],correta:1,explicacao:"<strong>Confessar é dominante</strong>: se o outro cala, eu ganho confessando (0 vs. 1); se o outro confessa, eu ganho confessando (8 vs. 20). É melhor em ambos os casos."},
+{principio:3,tipo:"principal",contexto:"Equilíbrio de Nash: cada jogador faz a melhor escolha possível, dado o que o outro está fazendo. Ninguém se arrepende, dada a escolha do outro.",texto:"No dilema do prisioneiro, o equilíbrio de Nash é:",alternativas:["Ambos calarem (1 ano cada)","Ambos confessarem (8 anos cada)","Um confessa e outro cala","Não há equilíbrio de Nash"],correta:1,explicacao:"O <strong>equilíbrio de Nash é (Confessar, Confessar)</strong>: dado que o outro confessa, cada um faz bem em confessar (8 < 20). 'Ambos calarem' não é Nash porque cada um teria incentivo a desviar."},
+{principio:3,tipo:"principal",contexto:"Matriz de duopólio: ambos cooperam (160 cada); um trai sozinho (240 vs. 120); ambos traem (100 cada).",texto:"Por que (cooperar, cooperar) NÃO é equilíbrio de Nash neste cartel?",alternativas:["Porque o lucro é alto demais","Porque, dado que o outro coopera, cada firma ganha mais traindo (240 > 160)","Porque o governo proíbe","Porque os consumidores não aceitam"],correta:1,explicacao:"Em Nash, ninguém pode melhorar mudando sozinho. Se rival coopera, eu ganho mais traindo (240 > 160). Logo (cooperar, cooperar) <strong>não é estável</strong> — não é Nash."},
+{principio:3,tipo:"reforco",contexto:"Estratégia dominante = melhor para um jogador independente do que o outro faça. É um conceito mais forte que equilíbrio de Nash.",texto:"Toda estratégia dominante leva a um equilíbrio de Nash, mas:",alternativas:["Todo equilíbrio de Nash tem estratégia dominante","Nem todo equilíbrio de Nash é em estratégia dominante (Nash é mais geral)","Estratégia dominante e Nash são a mesma coisa","Nash só existe quando não há estratégia dominante"],correta:1,explicacao:"Estratégia dominante é um caso especial e mais forte. <strong>Equilíbrio de Nash é mais geral</strong>: cada um faz o melhor dado o que o outro faz, sem precisar que essa escolha seja dominante."},
+{principio:3,tipo:"reforco",contexto:"Repetição muda o jogo: a possibilidade de punição futura sustenta cooperação. Estratégia tit-for-tat: comece cooperando, depois faça o que o outro fez no período anterior.",texto:"Em jogos repetidos, por que cooperação pode emergir mesmo entre jogadores egoístas?",alternativas:["Porque ficam cansados","Porque a ameaça de retaliação futura desincentiva traições","Porque mudam de personalidade","Porque o pagamento muda"],correta:1,explicacao:"Em jogo único, trair é dominante. Mas se o jogo se repete, traição hoje gera <strong>retaliação amanhã</strong>. Estratégias como tit-for-tat (olho por olho) sustentam cooperação por medo de punição futura."},
+{principio:3,tipo:"principal",contexto:"Aplicações do dilema: cartéis (preços altos vs. baixos), corrida armamentista (armar vs. desarmar), mudanças climáticas (poluir vs. cortar emissões).",texto:"Por que o problema das mudanças climáticas é frequentemente comparado a um dilema do prisioneiro?",alternativas:["Porque países gostam de poluir","Porque cada país tem incentivo a poluir enquanto outros cortam (free riding), levando todos a poluir","Porque CO2 é barato","Porque o clima é instável"],correta:1,explicacao:"Cortar emissões é caro; o benefício do clima estável é coletivo. Cada país, individualmente, prefere <strong>pegar carona</strong> nos esforços alheios. Resultado de Nash: todos poluem — pior para todos."},
+{principio:4,tipo:"principal",contexto:"No Brasil, o CADE (Conselho Administrativo de Defesa Econômica) é o órgão antitruste, regido pela Lei 12.529/2011. Pune cartel, abuso de posição dominante e atos de concentração que reduzem concorrência.",texto:"Qual é o objetivo principal da política antitruste (CADE)?",alternativas:["Aumentar a arrecadação de multas","Defender a concorrência: punir cartéis, abuso de posição dominante e fusões anticoncorrenciais","Eliminar todas as firmas grandes","Fixar preços máximos"],correta:1,explicacao:"O CADE protege a <strong>concorrência</strong> (não os concorrentes). Sua missão é evitar que poucas firmas exerçam poder de mercado em prejuízo dos consumidores e da eficiência."},
+{principio:4,tipo:"principal",contexto:"Acordo de leniência: a primeira firma a denunciar o cartel ao CADE recebe imunidade ou redução grande de pena. As demais pagam multa cheia.",texto:"Por que o acordo de leniência é tão eficaz para descobrir cartéis?",alternativas:["Porque firmas são honestas","Porque cria um novo dilema do prisioneiro entre os membros do cartel — cada um teme que outro denuncie primeiro","Porque é obrigatório","Porque reduz multas para todos igualmente"],correta:1,explicacao:"A leniência <strong>vira o jogo a favor do regulador</strong>: agora cada firma teme ser a segunda a denunciar e pagar tudo. Resultado: cartéis se desfazem 'por dentro'. É o dilema do prisioneiro usado como ferramenta."},
+{principio:4,tipo:"reforco",contexto:"Casos brasileiros emblemáticos: cartel do cimento (R$3,1 bi em multas), cartel das vergalhões de aço (R$300 mi), cartéis de combustíveis em várias cidades, cartel das empreiteiras (Lava Jato).",texto:"O cartel do cimento no Brasil (multado em R$3,1 bi pelo CADE em 2014) é exemplo de:",alternativas:["Concorrência saudável","Acordo ilegal entre firmas concorrentes para combinar preços e dividir mercado","Monopólio natural","Externalidade positiva"],correta:1,explicacao:"Foi um <strong>cartel clássico</strong>: 6 grandes grupos cimenteiros combinaram preços e dividiram regiões do Brasil. Foi a maior multa antitruste da história do país, descoberto via leniência."}
+];
+var NOMES={1:"Oligopólio (conceitos)",2:"Cooperação vs Competição",3:"Dilema do Prisioneiro",4:"Políticas Antitruste"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=4;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=4;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem oligopólio, dilema do prisioneiro e políticas antitruste.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e o Capítulo 17 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=4;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise oligopólio: poucas firmas, produtos similares, barreiras à entrada. Exemplos brasileiros: cervejas, bancos, telefonia, aviação. Compare com monopólio (1 firma) e concorrência monopolística (muitas com diferenciação).",2:"Revise a tensão cooperar vs. competir. Cartel = lucro alto mas frágil porque cada firma quer trair. CADE multou cartel do cimento em R$3,1 bi.",3:"Revise o dilema do prisioneiro: estratégia dominante (confessar/trair sempre é melhor) leva ao pior coletivo. Equilíbrio de Nash: cada um faz o melhor, dado o outro. Em jogos repetidos, tit-for-tat sustenta cooperação.",4:"Revise política antitruste: CADE, Lei 12.529/2011, multas até 20% do faturamento. Acordo de leniência cria dilema do prisioneiro entre membros do cartel — primeiro a denunciar fica imune."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

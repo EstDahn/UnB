@@ -1,0 +1,201 @@
+---
+title: "PPCA0026 - Demo: Visualização Interativa com R"
+subtitle: "Demonstração para Semana 2, Parte 2"
+author: "Prof. Donald M. Pianto"
+date: "2025-06-06"
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-fold: false
+    code-tools: true
+editor: source
+---
+
+## Objetivo e Configuração
+
+Este documento demonstra como criar visualizações interativas em R, aplicando os conceitos discutidos na aula. Vamos cobrir:
+
+1.  **Interatividade Básica com `plotly`**: Como transformar um gráfico estático `ggplot2` em um interativo, demonstrando os conceitos de **Details-on-Demand** (Tooltips) e **Zoom/Pan**.
+2.  **Interatividade Coordenada com `crosstalk`**: Como criar filtros dinâmicos e visualizações conectadas (**Linking & Brushing**).
+
+**Referências de Conceitos:**
+
+* `InteractionVis.pdf` (especialmente p. 3, 6-9, 37, 50, 54)
+* *Interactive web-based data visualization with R, plotly, and shiny* (Carson Sievert)
+
+---
+
+### 1. Configuração Inicial: Carregando Pacotes
+
+Primeiro, vamos carregar os pacotes necessários. Se você não os tiver instalados, execute `install.packages("tidyverse", "plotly", "crosstalk", "DT")` no seu console.
+
+```{r setup, message=FALSE, warning=FALSE}
+# Carrega o tidyverse para manipulação de dados (dplyr) e gráficos estáticos (ggplot2)
+library(tidyverse)
+
+# Carrega o plotly para tornar os gráficos interativos
+library(plotly)
+
+# Carrega o crosstalk para conectar widgets e gráficos
+library(crosstalk)
+
+# Carrega o DT para criar tabelas de dados interativas
+library(DT)
+```
+
+---
+
+## 2. Interatividade Básica: `ggplotly()`
+
+A maneira mais rápida de adicionar interatividade é usando a função `ggplotly()` do pacote `plotly`. Ela transforma um objeto `ggplot` estático em um gráfico web interativo.
+
+Isto demonstra diretamente os seguintes conceitos:
+
+* **Details-on-Demand**: Passe o mouse sobre um ponto para ver seus valores. (Ref: `InteractionVis-50.pdf`)
+* **Zoom e Pan**: Clique e arraste para ampliar uma região. Dê um duplo clique para redefinir a visualização. (Ref: `InteractionVis-37.pdf`, `InteractionVis-50.pdf`)
+
+### 2.1. Criando um Gráfico `ggplot2` Estático
+
+Vamos começar com um gráfico de dispersão simples usando o dataset `mpg`.
+
+```{r static-plot}
+# Criando o objeto ggplot estático
+p_static <- ggplot(mpg, aes(x = displ, y = hwy, color = class)) +
+  geom_point(alpha = 0.7) +
+  labs(
+    title = "Gráfico Estático: Consumo na Estrada vs. Cilindrada",
+    x = "Cilindrada do Motor (Litros)",
+    y = "Consumo na Estrada (MPG)",
+    color = "Classe do Veículo"
+  ) +
+  theme_minimal()
+
+# Exibindo o gráfico estático
+p_static
+```
+
+### 2.2. Transformando o Gráfico em Interativo
+
+Agora, aplicamos `ggplotly()` ao nosso objeto de gráfico estático.
+
+```{r interactive-plot}
+# Transformando o objeto ggplot em um objeto plotly
+# A saída será um gráfico HTML interativo
+ggplotly(p_static)
+```
+
+**Atividade em Aula:**
+
+1.  Passe o mouse (`hover`) sobre os pontos de dados. O que você observa? (Details-on-Demand)
+2.  Clique e arraste com o mouse para criar um retângulo sobre uma área densa de pontos. O que acontece? (Zoom)
+3.  Dê um duplo clique em qualquer lugar no gráfico. Qual o resultado? (Reset Zoom)
+4.  Clique nos itens da legenda para ocultar/mostrar classes de veículos.
+
+---
+
+## 3. Interatividade Coordenada: `crosstalk`
+
+O pacote `crosstalk` permite que múltiplos widgets (gráficos, tabelas, filtros) "conversem" entre si, criando uma experiência de exploração de dados mais rica.
+
+### 3.1. Filtros Dinâmicos
+
+Isto demonstra o conceito de **Filtros** e **Dynamic Queries** (Ref: `InteractionVis-9.pdf`, `InteractionVis-54.pdf`). Os widgets de filtro permitem que o usuário condicionalmente exiba subconjuntos dos dados.
+
+#### Passo 1: Criar um Objeto de Dados Compartilhado (`SharedData`)
+
+Para que os widgets se comuniquem, eles precisam operar sobre um mesmo conjunto de dados compartilhado.
+
+```{r shared-data}
+# Criando um objeto SharedData a partir do dataset mpg
+# CORREÇÃO: A chave (key) deve ser um identificador único para cada linha.
+# Usar `row.names()` é uma forma segura de garantir isso.
+shared_mpg <- SharedData$new(mpg, key = ~row.names(mpg))
+```
+
+#### Passo 2: Criar Widgets de Filtro e um Gráfico Conectado
+
+Vamos criar filtros para uma variável contínua (`hwy`) e uma categórica (`class`), e conectá-los a um gráfico de dispersão.
+
+```{r filter-demo}
+# Os widgets e o gráfico precisam ser combinados.
+# A função bscols() (bootstrap columns) ajuda a organizar os elementos lado a lado.
+bscols(
+  # Coluna dos widgets de filtro
+  widths = c(3, NA), # Define a largura da coluna do filtro (3 de 12)
+  list(
+    filter_slider("hwy_filter", "Consumo na Estrada (hwy)", shared_mpg, ~hwy, step = 1),
+    filter_checkbox("class_filter", "Classe do Veículo", shared_mpg, ~class, inline = FALSE)
+  ),
+  # Coluna do gráfico
+  ggplotly(
+    ggplot(shared_mpg, aes(x = cty, y = hwy)) +
+      geom_point(aes(color = drv), alpha = 0.5) +
+      labs(title = "Consumo Cidade vs. Estrada", x = "Consumo (Cidade)", y = "Consumo (Estrada)")
+  )
+)
+```
+
+**Atividade em Aula:**
+
+1.  Mova o controle deslizante (`slider`) de "Consumo na Estrada". O que acontece com o gráfico?
+2.  Marque/desmarque as caixas de seleção (`checkbox`) de "Classe do Veículo". Como o gráfico responde?
+
+### 3.2. Visualizações Conectadas (Linking & Brushing)
+
+Este é um dos conceitos mais importantes da exploração visual interativa. Ao selecionar ("brushing") dados em uma visualização, os dados correspondentes são destacados ("linking") em outras visualizações. (Ref: `InteractionVis-6.pdf` a `InteractionVis-8.pdf`).
+
+Vamos conectar dois gráficos de dispersão e uma tabela de dados.
+
+```{r linking-brushing-demo}
+# Usaremos o mesmo objeto 'shared_mpg' criado anteriormente.
+
+# Criando os componentes: dois gráficos e uma tabela
+plot1 <- ggplot(shared_mpg, aes(x = displ, y = hwy, color = drv)) + 
+  geom_point(alpha = 0.5) + 
+  labs(title = "Dispersão 1: hwy vs displ")
+
+plot2 <- ggplot(shared_mpg, aes(x = cty, y = hwy, color = drv)) + 
+  geom_point(alpha = 0.5) + 
+  labs(title = "Dispersão 2: hwy vs cty")
+
+tabela_dados <- datatable(shared_mpg, extensions = 'Buttons', options = list(
+  dom = 'Bfrtip',
+  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+  pageLength = 5 # Mostrar apenas 5 linhas por vez
+))
+
+# Organizando os componentes
+# A função highlight() do plotly é a chave para ativar o brushing
+bscols(
+  widths = c(6, 6), # Duas colunas de igual largura
+  # CORREÇÃO: Removido `persistent = TRUE` para seguir as boas práticas.
+  # A seleção persistente agora é feita pelo usuário segurando a tecla 'Shift'.
+  # Este é um bom ponto para ensinar aos alunos sobre esta funcionalidade.
+  highlight(ggplotly(plot1, tooltip = "class"), "plotly_selected"),
+  highlight(ggplotly(plot2, tooltip = "class"), "plotly_selected")
+)
+
+# A tabela aparecerá abaixo dos gráficos
+highlight(tabela_dados, "plotly_selected")
+
+```
+
+**Atividade em Aula:**
+
+1.  No "Dispersão 1", use a ferramenta "Lasso Select" ou "Box Select" (na barra de ferramentas do Plotly) para selecionar um grupo de pontos.
+2.  Observe o que acontece simultaneamente no "Dispersão 2" e na tabela de dados abaixo. A seleção é sincronizada.
+3.  Tente novamente, mas desta vez segure a tecla **Shift** enquanto faz a seleção. Note que a seleção agora "persiste" (permanece) mesmo depois de soltar o mouse.
+
+---
+
+## Conclusão
+
+Nesta demonstração, vimos como usar os pacotes `plotly` e `crosstalk` em R para implementar conceitos fundamentais de visualização interativa.
+
+* `ggplotly` é a porta de entrada para interatividade, adicionando **Details-on-Demand** e **Zoom/Pan**.
+* `crosstalk` permite criar dashboards de exploração mais complexos com **Filtros Dinâmicos** e **Visualizações Conectadas (Linking & Brushing)**, sem a necessidade de um servidor `shiny`.
+
+Estas ferramentas são extremamente úteis para a fase de Análise Exploratória de Dados (EDA) em qualquer projeto de mineração de dados.

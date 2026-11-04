@@ -1,0 +1,364 @@
+---
+title: "Resumo do Capítulo 15 de R4DS: Expressões Regulares"
+author: "Adaptado por Gemini"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## 15.1 Introdução
+
+Este capítulo foca no uso de **expressões regulares** (regex), uma linguagem poderosa para descrever padrões em strings. Abordaremos os conceitos básicos, as funções mais úteis do `stringr` e `tidyr`, e detalhes mais avançados sobre a sintaxe dos padrões.
+
+### 15.1.1 Pré-requisitos
+
+Usaremos os pacotes `tidyverse` e `dados`. Também utilizaremos três vetores de caracteres do pacote `stringr`: `fruit`, `words` e `sentences`.
+
+```{r setup}
+library(tidyverse)
+library(dados)
+```
+
+## 15.2 Padrões Básicos
+
+Usaremos a função `str_view()` para visualizar como os padrões regex funcionam. Ela destaca as correspondências (matches) em um vetor de strings.
+
+Os padrões mais simples são os **caracteres literais** (letras e números), que correspondem a si mesmos.
+
+```{r padrao_literal}
+str_view(fruit, "berry")
+```
+
+Muitos outros caracteres, como `.`, `+`, `*`, `?`, são **metacaracteres** com significados especiais.
+
+* `.` (ponto): Corresponde a **qualquer caractere**.
+
+```{r padrao_ponto}
+# Encontra um "a" seguido por qualquer caractere
+str_view(c("a", "ab", "ae", "bd", "ea", "eab"), "a.")
+```
+
+* **Quantificadores:** Controlam quantas vezes um padrão pode ocorrer.
+    * `?`: 0 ou 1 vez (opcional).
+    * `+`: 1 ou mais vezes.
+    * `*`: 0 ou mais vezes.
+
+```{r quantificadores_basicos}
+# ab? : "a", opcionalmente seguido por "b"
+str_view(c("a", "ab", "abb"), "ab?")
+
+# ab+ : "a", seguido por pelo menos um "b"
+str_view(c("a", "ab", "abb"), "ab+")
+
+# ab* : "a", seguido por zero ou mais "b"s
+str_view(c("a", "ab", "abb"), "ab*")
+```
+
+* **Classes de Caracteres (`[]`):** Correspondem a qualquer caractere dentro dos colchetes. `[^...]` corresponde a qualquer caractere *exceto* os que estão nos colchetes.
+
+```{r classes_caracteres}
+# Encontra palavras com "x" entre vogais
+str_view(words, "[aeiou]x[aeiou]")
+
+# Encontra palavras com "y" entre consoantes
+str_view(words, "[^aeiou]y[^aeiou]")
+```
+
+* **Alternância (`|`):** Permite escolher entre múltiplos padrões.
+
+```{r alternancia}
+# Encontra frutas com "apple", "melon" ou "nut"
+str_view(fruit, "apple|melon|nut")
+
+# Encontra frutas com vogais repetidas
+str_view(fruit, "aa|ee|ii|oo|uu")
+```
+
+## 15.3 Funções Chave
+
+### 15.3.1 Detectando Correspondências
+
+`str_detect()` retorna `TRUE` se o padrão for encontrado e `FALSE` caso contrário. É ideal para usar com `filter()`.
+
+```{r str_detect_exemplo}
+# Detecta quais strings contêm uma vogal
+str_detect(c("a", "b", "c"), "[aeiou]")
+
+# Filtra os nomes de bebês mais populares que contêm "x"
+bebes |> 
+  filter(str_detect(nome, "x")) |> 
+  count(nome, wt = n, sort = TRUE)
+```
+
+Com `summarize()`, podemos calcular a contagem (`sum()`) ou a proporção (`mean()`) de correspondências.
+
+```{r str_detect_summarize}
+# Proporção de nomes de bebês com "x" ao longo dos anos
+bebes |> 
+  group_by(ano) |> 
+  summarize(prop_x = mean(str_detect(nome, "x"))) |> 
+  ggplot(aes(x = ano, y = prop_x)) + 
+  geom_line()
+```
+[Imagem de uma série temporal mostrando a proporção de nomes de bebês que contém a letra x]
+
+### 15.3.2 Contando Correspondências
+
+`str_count()` informa *quantas* correspondências existem em cada string. As correspondências de regex nunca se sobrepõem.
+
+```{r str_count_exemplo}
+x <- c("apple", "banana", "pear")
+str_count(x, "p")
+
+# "aba" corresponde duas vezes em "abababa", não três
+str_count("abababa", "aba")
+str_view("abababa", "aba")
+```
+
+As expressões regulares diferenciam maiúsculas de minúsculas. Para ignorar essa diferença, podemos modificar o padrão (`"[aeiouAEIOU]"`), usar a função `regex()` com `ignore_case = TRUE`, ou pré-processar a string com `str_to_lower()`.
+
+```{r str_count_case_sensitive}
+# Contando vogais e consoantes (após converter para minúsculas)
+bebes |> 
+  count(nome) |> 
+  mutate(
+    nome = str_to_lower(nome),
+    vogais = str_count(nome, "[aeiou]"),
+    consoantes = str_count(nome, "[^aeiou]")
+  )
+```
+
+### 15.3.3 Trocando Valores
+
+`str_replace()` troca a primeira correspondência, enquanto `str_replace_all()` troca todas. `str_remove()` e `str_remove_all()` são atalhos para remover padrões.
+
+```{r str_replace_all_exemplo}
+x <- c("apple", "pear", "banana")
+str_replace_all(x, "[aeiou]", "-")
+```
+
+```{r str_remove_all_exemplo}
+x <- c("apple", "pear", "banana")
+str_remove_all(x, "[aeiou]")
+```
+
+### 15.3.4 Extraindo Variáveis
+
+`tidyr::separate_wider_regex()` extrai dados de uma coluna para múltiplas novas colunas usando regex. Para cada parte que queremos extrair, damos um nome no argumento `patterns`. As partes que não queremos extrair ficam sem nome.
+
+```{r separate_wider_regex_exemplo}
+df <- tribble(
+  ~str,
+  "<Sheryl>-F_34",
+  "<Kisha>-F_45", 
+  "<Brandon>-M_33",
+  "<Sharon>-F_38", 
+  "<Penny>-F_58",
+  "<Justin>-M_41", 
+  "<Patricia>-F_84", 
+)
+
+df |> 
+  separate_wider_regex(
+    str,
+    patterns = c(
+      "<", 
+      nome = "[A-Za-z]+", 
+      ">-", 
+      sexo_biologico = ".",
+      "_",
+      idade = "[0-9]+"
+    )
+  )
+```
+
+## 15.4 Detalhes de Padrões
+
+### 15.4.1 Escapando Caracteres
+
+Para corresponder a um metacaractere literal (como `.`), você precisa "escapá-lo" com uma barra invertida (`\`). Como as strings em R também usam `\` para escape, você precisa digitar duas barras invertidas (`\\.`) para criar uma expressão regular que corresponda a um ponto.
+
+```{r escape_exemplo}
+# Para criar a regex \., usamos a string "\\."
+ponto <- "\\."
+str_view(ponto) # A regex em si tem apenas uma barra
+
+# Isso busca um ponto literal
+str_view(c("abc", "a.c", "bef"), "a\\.c")
+```
+Para corresponder a uma `\` literal, você precisa digitar `\\\\`.
+
+### 15.4.2 Âncoras
+
+Âncoras forçam a correspondência a ocorrer em posições específicas:
+
+* `^`: Início da string.
+* `$`: Fim da string.
+* `\b`: Limite de palavra (o início ou o fim de uma palavra).
+
+```{r ancoras_exemplo}
+str_view(fruit, "^a") # Frutas que começam com "a"
+str_view(fruit, "a$") # Frutas que terminam com "a"
+
+# Força a correspondência da string inteira
+str_view(fruit, "^apple$")
+
+# \b encontra a palavra "sum" exata
+x <- c("summary(x)", "summarize(df)", "rowsum(x)", "sum(x)")
+str_view(x, "\\bsum\\b")
+```
+
+### 15.4.3 Classes de Caracteres e Atalhos
+
+Além de `.` e `[]`, existem outros atalhos úteis:
+
+* `\d`: Qualquer dígito. `\D`: Qualquer não-dígito.
+* `\s`: Qualquer espaço em branco (espaço, tab, nova linha). `\S`: Qualquer não-espaço.
+* `\w`: Qualquer caractere de "palavra" (letras e números). `\W`: Qualquer não-palavra.
+
+```{r atalhos_classes}
+x <- "abcd ABCD 12345 -!@#%."
+str_view(x, "\\d+") # Corresponde aos dígitos
+str_view(x, "\\s+") # Corresponde aos espaços
+str_view(x, "\\w+") # Corresponde a letras e números
+```
+
+### 15.4.4 Quantificadores Detalhados
+
+Além de `?`, `+`, e `*`, você pode especificar o número exato de correspondências com `{}`:
+
+* `{n}`: Exatamente `n` vezes.
+* `{n,}`: Pelo menos `n` vezes.
+* `{n,m}`: Entre `n` e `m` vezes.
+
+### 15.4.5 Precedência e Parênteses
+
+Assim como na aritmética, as regex têm regras de precedência. Quantificadores (`+`, `*`) têm alta precedência, e a alternância (`|`) tem baixa.
+* `ab+` significa `a(b+)`.
+* `^a|b$` significa `(^a)|(b$)`.
+
+Na dúvida, **use parênteses `()`** para garantir a ordem correta das operações.
+
+### 15.4.6 Agrupamento e Captura
+
+Parênteses `()` também criam **grupos de captura**, permitindo extrair e referenciar subcomponentes da correspondência.
+
+* **Referências Anteriores (Backreferences):** Dentro de um padrão, `\1` se refere ao que foi capturado pelo primeiro grupo, `\2` ao segundo, e assim por diante.
+
+```{r backreferences_exemplo}
+# Encontra frutas com um par de letras repetido
+str_view(fruit, "(..)\\1")
+
+# Encontra palavras que começam e terminam com o mesmo par de letras
+str_view(words, "^(..).*\\1$")
+```
+
+Você também pode usar referências anteriores em `str_replace()` para reorganizar partes de uma string.
+
+```{r str_replace_backreference}
+# Troca a ordem da segunda e terceira palavras
+sentences |> 
+  str_replace("(\\w+) (\\w+) (\\w+)", "\\1 \\3 \\2") |> 
+  str_view()
+```
+
+Para extrair o conteúdo de cada grupo, use `str_match()`. No entanto, `separate_wider_regex()` é geralmente uma abordagem mais `tidyverse` para este problema.
+
+Para usar parênteses para agrupamento sem criar um grupo de captura, use `(?:...)`.
+
+## 15.5 Controle de Padrões
+
+É possível ter mais controle sobre a correspondência envolvendo o padrão em uma função auxiliar.
+
+### 15.5.1 Sinalizadores Regex
+
+A função `regex()` permite ajustar o comportamento da regex com "sinalizadores" (flags):
+
+* `ignore_case = TRUE`: Ignora a diferença entre maiúsculas e minúsculas.
+
+```{r regex_ignore_case}
+bananas <- c("banana", "Banana", "BANANA")
+str_view(bananas, regex("banana", ignore_case = TRUE))
+```
+
+* `multiline = TRUE`: Faz com que `^` e `$` correspondam ao início e fim de cada linha, em vez da string inteira.
+* `comments = TRUE`: Permite adicionar comentários e espaços em branco à sua regex para torná-la mais legível.
+
+### 15.5.2 Correspondências Fixas
+
+Para desativar completamente as regras de regex e corresponder a uma string literal, use `fixed()`. Para comparações sensíveis à localidade (idioma), use `coll()`.
+
+```{r fixed_exemplo}
+str_view(c("", "a", "."), fixed("."))
+```
+
+## 15.6 Prática
+
+### 15.6.1 Verificando seu Trabalho
+
+Ao construir uma regex, é útil criar vetores de teste com correspondências positivas (que devem corresponder) e negativas (que não devem) para verificar se seu padrão está funcionando como esperado.
+
+```{r pratica_verificacao}
+# Queremos encontrar frases que começam com um pronome
+pos <- c("Ele é jovem", "Elas se divertiram")
+neg <- c("Eleitores não compareceram na data correta", "Hadley nos disse 'É um ótimo dia!'")
+
+padrao <- "^(Eu|Tu|Ele|Ela|Nós|Vós|Eles|Elas)\\b"
+str_detect(pos, padrao)
+str_detect(neg, padrao)
+```
+
+### 15.6.2 Operações Booleanas
+
+Às vezes, é mais fácil resolver um problema invertendo-o ou combinando múltiplos `str_detect()` com operadores lógicos (`&`, `|`, `!`) do que construir uma única regex complexa.
+
+```{r pratica_booleana}
+# Encontrar palavras com "a" E "b" é mais fácil com `&`
+words[str_detect(words, "a") & str_detect(words, "b")]
+
+# Encontrar palavras que NÃO contêm vogais
+words[!str_detect(words, "[aeiou]")]
+```
+
+### 15.6.3 Criando um Padrão com Código
+
+Quando você tem uma longa lista de palavras para procurar, pode construir a regex programaticamente usando `str_c()` e `str_flatten()`.
+
+```{r pratica_criar_padrao}
+# Encontrar frases que mencionam cores do R
+cores <- colors()
+cores <- cores[!str_detect(cores, "\\d")] # Remove cores com números
+
+# Cria um padrão gigante: "\\b(white|aliceblue|...)\\b"
+padrao <- str_c("\\b(", str_flatten(cores, "|"), ")\\b")
+
+str_view(sentences, padrao)
+```
+
+---
+
+## Tabela de Funções
+
+| Função                    | Descrição                                                                               |
+|---------------------------|-----------------------------------------------------------------------------------------|
+| `str_view(string, pattern)` | Exibe as correspondências de um padrão em um vetor de caracteres. Ideal para aprendizado. |
+| `str_detect(string, pattern)` | Retorna `TRUE`/`FALSE` se o padrão for encontrado. Ótimo para usar com `filter()`.   |
+| `str_count(string, pattern)`  | Conta o número de correspondências em cada string.                                      |
+| `str_replace(string, pattern, replacement)` | Substitui a primeira correspondência do padrão.                                         |
+| `str_replace_all(string, pattern, replacement)`| Substitui todas as correspondências do padrão.                                       |
+| `str_remove(string, pattern)`   | Remove a primeira correspondência (atalho para `str_replace(..., replacement = "")`).   |
+| `str_remove_all(string, pattern)`| Remove todas as correspondências.                                                      |
+| `str_match(string, pattern)`    | Extrai o conteúdo dos grupos de captura de uma regex para uma matriz.                 |
+| `separate_wider_regex(data, col, patterns)` | (Do `tidyr`) Extrai dados de uma coluna para novas colunas usando regex nomeadas.      |
+| `regex(pattern, ...)`         | Modifica o comportamento de uma regex com sinalizadores (`ignore_case`, `multiline`, etc.). |
+| `fixed(pattern)`              | Trata o padrão como uma string literal, desativando a regex.                            |
+| `coll(pattern, locale)`       | Corresponde a uma string literal, mas respeitando as regras de ordenação de um idioma.    |

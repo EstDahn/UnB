@@ -1,0 +1,133 @@
+---
+title: "Resumo do Capítulo 14.6 de R4DS: Texto em Outro Idioma"
+author: "Adaptado por Gemini"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Este documento resume os principais desafios ao trabalhar com textos em idiomas que não sejam o inglês, conforme discutido no capítulo 14.6 do livro "R para Ciência de Dados". Os principais desafios são: codificação de caracteres, variações de letras e funções que dependem da localidade (idioma e região).
+
+```{r setup}
+# Carregando pacotes necessários
+library(tidyverse)
+```
+
+---
+
+## 14.6.1 Codificação de Caracteres (Encoding)
+
+O primeiro desafio ao trabalhar com textos não-ingleses é a codificação de caracteres. Os computadores representam strings como uma sequência de números. A função `charToRaw()` nos mostra essa representação subjacente.
+
+```{r charToRaw_exemplo}
+charToRaw("Hadley")
+```
+
+A correspondência entre número e caractere é definida por uma **codificação**. A codificação padrão para o inglês é a **ASCII**, mas ela não abrange caracteres acentuados ou de outros alfabetos.
+
+Historicamente, existiam muitos padrões concorrentes (como `Latin1` para a Europa Ocidental e `Latin2` para a Europa Central), o que causava conflitos. Hoje, o padrão universal é o **UTF-8**, que o `readr` utiliza por padrão.
+
+No entanto, ao trabalhar com dados de sistemas mais antigos, podemos encontrar arquivos com outras codificações, resultando em caracteres exibidos incorretamente.
+
+```{r encoding_demo}
+# O exemplo original do livro usa strings que podem ser inválidas na codificação 
+# do seu sistema (ex: UTF-8), causando erros. Uma forma mais robusta de 
+# demonstrar o problema é simular o cenário real: criar arquivos com 
+# codificações específicas e depois tentar lê-los.
+
+# 1. Criar um arquivo temporário com codificação Latin1
+texto_latin1 <- "text\nEl Niño foi particularmente severo este ano"
+caminho_latin1 <- tempfile()
+writeBin(iconv(texto_latin1, from = "UTF-8", to = "Latin1", toRaw = TRUE)[[1]], caminho_latin1)
+
+# 2. Criar um arquivo temporário com codificação Shift-JIS (Japonês)
+texto_sjis <- "text\nこんにちは"
+caminho_sjis <- tempfile()
+writeBin(iconv(texto_sjis, from = "UTF-8", to = "Shift-JIS", toRaw = TRUE)[[1]], caminho_sjis)
+
+
+# --- Problema: Lendo com a codificação errada (padrão é UTF-8) ---
+# O texto aparece corrompido ou gera um aviso.
+read_csv(caminho_latin1, progress = FALSE)$text
+read_csv(caminho_sjis, progress = FALSE)$text
+
+
+# --- Solução: Especificando a codificação correta no locale ---
+read_csv(caminho_latin1, locale = locale(encoding = "Latin1"), progress = FALSE)$text
+read_csv(caminho_sjis, locale = locale(encoding = "Shift-JIS"), progress = FALSE)$text
+```
+
+Se a codificação não estiver documentada, a função `readr::guess_encoding()` pode ajudar a identificá-la, funcionando melhor com textos mais longos.
+
+---
+
+## 14.6.2 Variações de Letras
+
+Letras acentuadas podem ser representadas de duas formas: como um único caractere pré-composto (ex: `ü`) ou como uma combinação de um caractere base e um acento (ex: `u` + `¨`).
+
+Embora pareçam idênticas na visualização, o R as trata de forma diferente em sua representação interna, o que afeta o cálculo do comprimento da string e a extração de substrings.
+
+```{r variacoes_letras_view}
+u <- c("\u00fc", "u\u0308")
+str_view(u)
+```
+
+Veja como `str_length()` e `str_sub()` produzem resultados diferentes para cada representação:
+
+```{r variacoes_letras_funcoes}
+str_length(u)
+str_sub(u, 1, 1)
+```
+
+A comparação direta com `==` considera as strings diferentes. Para comparar a aparência visual, use `stringr::str_equal()`.
+
+```{r variacoes_letras_comparacao}
+u[[1]] == u[[2]]
+str_equal(u[[1]], u[[2]])
+```
+
+---
+
+## 14.6.3 Funções Dependentes de Localidade (Locale)
+
+Algumas operações com strings, como alterar a capitalização (maiúsculas/minúsculas) e ordenar, dependem da **localidade** (idioma e região, ex: `pt_BR` para português do Brasil).
+
+Por padrão, o `stringr` usa a localidade `en` (inglês) para garantir que o código produza os mesmos resultados em qualquer computador. Para usar regras específicas de um idioma, o argumento `locale` deve ser especificado.
+
+#### Alteração de Caixa (Maiúsculas/Minúsculas)
+
+As regras de capitalização variam. O turco, por exemplo, tem dois "i"s (com e sem ponto), que são capitalizados de forma diferente.
+
+```{r locale_case}
+# Com a localidade padrão (inglês)
+str_to_upper(c("i", "ı"))
+
+# Com a localidade turca ("tr")
+str_to_upper(c("i", "ı"), locale = "tr")
+```
+
+#### Ordenação de Strings
+
+A ordem alfabética também muda entre os idiomas. Em tcheco (`cs`), a combinação "ch" é tratada como uma letra que vem depois do "h".
+
+```{r locale_sort}
+# Ordenação padrão (inglês)
+str_sort(c("a", "c", "ch", "h", "z"))
+
+# Ordenação com a localidade tcheca ("cs")
+str_sort(c("a", "c", "ch", "h", "z"), locale = "cs")
+```
+
+Essa sensibilidade à localidade também se aplica à função `dplyr::arrange()`, que possui um argumento `.locale` para garantir a ordenação correta em diferentes idiomas.
+

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz - Aula 9: Monopólio e Concorrência Monopolística</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.72em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Monopólio e Concorrência Monopolística</h1>
+<p>Quiz Adaptativo — Aula 9 · Introdução à Economia · UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreensão de <strong>monopólio, demanda e receita marginal do monopolista, peso morto, políticas (CADE, regulação) e concorrência monopolística</strong> (Mankiw, Caps. 15 e 16).<br>Se errar uma questão principal, você receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Em Brasília, a CAESB é a única empresa que fornece água encanada e esgoto. A rede de tubulações custou bilhões de reais ao longo de décadas.",texto:"A CAESB é um exemplo de qual tipo de monopólio?",alternativas:["Monopólio por recurso único","Monopólio por patente","Monopólio natural (custo médio decrescente)","Não é monopólio"],correta:2,explicacao:"A CAESB é um <strong>monopólio natural</strong>: o custo fixo da rede é altíssimo e atender mais clientes faz cair o custo médio. Ter duas empresas concorrendo seria mais caro do que ter uma só."},
+{principio:1,tipo:"principal",contexto:"Um laboratório lança um remédio inovador para câncer. Durante 20 anos, só ele pode produzir esse remédio.",texto:"Esse monopólio temporário existe porque:",alternativas:["O laboratório controla um recurso único","O governo concede uma patente para incentivar a inovação","É um monopólio natural","O remédio não tem demanda"],correta:1,explicacao:"É um <strong>monopólio criado pelo governo</strong> via <strong>patente</strong>. A patente garante exclusividade por cerca de 20 anos no Brasil --- o objetivo é incentivar pesquisa, mesmo sabendo que gera preços altos no curto prazo."},
+{principio:1,tipo:"principal",contexto:"As três condições para um monopólio: uma única firma, sem substitutos próximos e barreiras significativas à entrada.",texto:"Qual destas características NÃO é típica de um monopólio?",alternativas:["Uma única firma vende o produto","Há barreiras à entrada de novos concorrentes","Existem muitos substitutos próximos","A firma é formadora de preço (price maker)"],correta:2,explicacao:"Monopólio se caracteriza justamente pela <strong>ausência de substitutos próximos</strong>. Se houvesse muitos substitutos, os consumidores poderiam trocar e o ``monopolista'' não teria poder de mercado."},
+{principio:1,tipo:"reforco",contexto:"As três origens do monopólio: (1) recursos únicos, (2) criação pelo governo (patentes, concessões), (3) monopólio natural (CMe decrescente).",texto:"O metrô do DF tem uma única operadora. Trata-se principalmente de:",alternativas:["Monopólio por recurso natural raro","Monopólio natural (custos fixos muito altos)","Concorrência monopolística","Mercado competitivo regulado"],correta:1,explicacao:"Trilhos, estações e túneis envolvem custo fixo gigantesco. Atender mais passageiros pelos mesmos trilhos faz cair o custo médio --- é um <strong>monopólio natural</strong>."},
+{principio:2,tipo:"principal",contexto:"Uma sorveteria é a única em uma cidade pequena. Hoje vende 5 sorvetes a R$6 cada. Para vender o 6º sorvete, precisa baixar o preço para R$5 (vale para todos os sorvetes vendidos).",texto:"Qual é a receita marginal aproximada do 6º sorvete?",alternativas:["R$6 (igual ao novo preço)","R$5","R$0 (RT continua R$30)","R$30"],correta:2,explicacao:"RT antiga = 5 × 6 = R$30. RT nova = 6 × 5 = R$30. <strong>RMg = ΔRT = 0</strong>. Embora o sorvete seja vendido por R$5, a empresa perdeu R$1 em cada um dos 5 sorvetes anteriores --- o efeito preço cancela o efeito quantidade."},
+{principio:2,tipo:"principal",contexto:"Comparando uma firma competitiva com um monopolista: ambos enfrentam decisões diferentes sobre o efeito de aumentar a quantidade vendida.",texto:"No monopólio, por que a receita marginal é menor que o preço (RMg < P)?",alternativas:["Porque o monopolista paga mais impostos","Porque para vender uma unidade a mais, precisa BAIXAR o preço de TODAS as unidades","Porque o custo marginal sempre cresce","Porque há concorrentes invisíveis"],correta:1,explicacao:"O monopolista enfrenta uma <strong>demanda decrescente</strong>. Para vender uma unidade extra, precisa reduzir o preço, e isso vale para todas as unidades. RMg = P (efeito quantidade) − ΔP × Q anterior (efeito preço) < P."},
+{principio:2,tipo:"principal",contexto:"A CAESB é monopolista no DF; uma feirante de tomate em mercado competitivo enfrenta preço dado.",texto:"Sobre a curva de demanda enfrentada por cada uma:",alternativas:["Ambas são horizontais","Ambas são decrescentes","A da CAESB é decrescente; a da feirante é horizontal","A da CAESB é horizontal; a da feirante é decrescente"],correta:2,explicacao:"O monopolista é o único vendedor, então sua demanda é a <strong>demanda do mercado (decrescente)</strong>. A firma competitiva é tomadora de preço: vende quanto quiser ao preço dado --- demanda <strong>horizontal</strong>."},
+{principio:2,tipo:"reforco",contexto:"Para o monopolista: RMe = P (sempre); RMg < P (a partir da 2ª unidade); RMg cai mais rápido que P.",texto:"Para o monopolista, qual é a relação entre receita média (RMe) e preço (P)?",alternativas:["RMe > P","RMe = P","RMe < P","RMe = 0"],correta:1,explicacao:"RMe = RT/Q = (P × Q)/Q = <strong>P</strong>. A receita média sempre é igual ao preço, mesmo no monopólio. O que difere é a <strong>RMg</strong>, que é menor que P."},
+{principio:3,tipo:"principal",contexto:"Uma firma monopolista observa que, no nível atual de produção, RMg = R$10 e CMg = R$6.",texto:"Para maximizar o lucro, ela deveria:",alternativas:["Diminuir a produção","Manter a produção atual","Aumentar a produção","Fechar imediatamente"],correta:2,explicacao:"Como RMg (R$10) > CMg (R$6), cada unidade extra traz mais receita do que custo. <strong>Aumentar a produção</strong> aumenta o lucro --- até atingir RMg = CMg."},
+{principio:3,tipo:"principal",contexto:"No equilíbrio do monopolista, vale a regra RMg = CMg, mas a relação entre P e CMg é diferente do mercado competitivo.",texto:"No ponto de máximo lucro do monopolista, a relação entre P e CMg é:",alternativas:["P = CMg","P > CMg","P < CMg","P = 0"],correta:1,explicacao:"Como RMg < P para o monopolista, e a regra de máximo é RMg = CMg, então no ótimo <strong>P > CMg</strong>. É exatamente esse excesso (P − CMg) que gera o lucro extra do monopolista e o peso morto."},
+{principio:3,tipo:"principal",contexto:"O peso morto do monopólio é a área entre as curvas de demanda e custo marginal, entre Q monopólio e Q eficiente.",texto:"O peso morto do monopólio existe porque:",alternativas:["O monopolista cobra um preço alto","O monopolista produz MENOS do que seria socialmente eficiente","O custo fixo é alto","Há muitos concorrentes"],correta:1,explicacao:"O problema social NÃO é o lucro alto (que é uma transferência), e sim o fato de o monopolista <strong>produzir menos</strong> que o socialmente desejável. Há unidades que valeriam mais para o consumidor do que custariam, mas que não são produzidas."},
+{principio:3,tipo:"reforco",contexto:"Regra geral: produzir até RMg = CMg. Em mercado competitivo, RMg = P, então P = CMg. Em monopólio, RMg < P, então P > CMg.",texto:"Para o monopolista, a regra de maximização de lucro é:",alternativas:["P = CMg","P = CMe","RMg = CMg","Q máximo possível"],correta:2,explicacao:"<strong>RMg = CMg</strong> é a regra geral, válida para qualquer firma. O que muda é o que isso implica para o preço: no competitivo, P = CMg; no monopólio, P > CMg."},
+{principio:4,tipo:"principal",contexto:"A Kroton e a Estácio, duas das maiores empresas de educação superior do Brasil, anunciaram fusão em 2017. Juntas, controlariam mais de 1,5 milhão de alunos. O CADE reprovou a fusão.",texto:"Por que o CADE atua nesses casos?",alternativas:["Para arrecadar multas","Para evitar excesso de concentração de mercado e proteger a concorrência","Para ajudar empresas grandes","Para regular preços de mensalidade"],correta:1,explicacao:"O <strong>CADE</strong> (Conselho Administrativo de Defesa Econômica) aplica a Lei 12.529/2011 e atua para evitar cartéis, fusões abusivas e abuso de posição dominante --- protegendo a concorrência e os consumidores."},
+{principio:4,tipo:"principal",contexto:"A CAESB é regulada pela ADASA, que define a tarifa da água com base aproximadamente no custo médio de fornecer.",texto:"Por que regular o monopólio natural com P = CMe (e não P = CMg)?",alternativas:["Porque CMg é difícil de medir","Porque em monopólio natural CMg < CMe; cobrar CMg geraria prejuízo para a firma","Porque é mais lucrativo para a firma","Porque o consumidor prefere preços baixos"],correta:1,explicacao:"Em <strong>monopólio natural</strong>, o custo médio é decrescente, logo CMg < CMe. Cobrar P = CMg seria ideal, mas geraria <strong>prejuízo</strong> à firma. P = CMe cobre os custos e mantém um peso morto pequeno."},
+{principio:4,tipo:"principal",contexto:"Em uma rua movimentada de Brasília, há vários restaurantes (italiano, japonês, mineiro, hambúrguer). Cada um tem cardápio próprio e clientes fiéis. Novos restaurantes abrem todo ano.",texto:"Esse mercado é melhor descrito como:",alternativas:["Mercado competitivo","Monopólio puro","Concorrência monopolística","Não é um mercado"],correta:2,explicacao:"Tem as três características da <strong>concorrência monopolística</strong>: (1) muitas firmas, (2) produtos diferenciados (não idênticos), (3) livre entrada e saída. É o caso intermediário entre competitivo e monopólio."},
+{principio:4,tipo:"principal",contexto:"Em concorrência monopolística, no curto prazo as firmas podem ter lucro (como mini-monopolistas), mas no longo prazo a livre entrada de novos concorrentes muda esse cenário.",texto:"No equilíbrio de longo prazo da concorrência monopolística, o lucro econômico das firmas é:",alternativas:["Sempre positivo (como no monopólio)","Sempre negativo","Zero (a entrada de novos concorrentes elimina o lucro)","Igual ao custo fixo"],correta:2,explicacao:"<strong>Lucro econômico = 0</strong> no longo prazo, como no mercado competitivo. A livre entrada faz a demanda de cada firma cair até apenas tangenciar o CMe. É a mistura: como monopólio no curto prazo, como competitivo no longo."},
+{principio:4,tipo:"reforco",contexto:"Concorrência monopolística: muitas firmas + produtos diferenciados + livre entrada. P > CMg (ineficiente), mas oferece variedade.",texto:"Por que, em geral, NÃO faz sentido o governo regular preços de restaurantes?",alternativas:["Porque restaurantes não têm peso morto","Porque os peso mortos individuais são pequenos, há livre entrada e a variedade tem valor para os consumidores","Porque restaurantes são monopólios naturais","Porque o CADE já regula isso"],correta:1,explicacao:"Apesar de P > CMg gerar peso morto, ele é <strong>pequeno</strong> em cada caso. A livre entrada já controla os lucros excessivos, regular milhares de produtos seria custoso, e a variedade é altamente valorizada. ``Deixar quieto'' faz sentido aqui."}
+];
+var NOMES={1:"Monopólio (conceitos)",2:"Demanda/Receita",3:"Maximização e Peso Morto",4:"Políticas e Conc. Monop."};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=4;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=4;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem monopólio e concorrência monopolística.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e os Capítulos 15 e 16 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=4;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise o que é monopólio (uma firma, sem substitutos próximos, barreiras à entrada) e suas três origens: recursos únicos, criação pelo governo (patentes, concessões) e monopólio natural (CMe decrescente).",2:"Revise a demanda do monopolista (decrescente, igual à do mercado) e por que RMg < P: para vender mais, precisa baixar o preço de TODAS as unidades. RMe = P; RMg < P.",3:"Revise a regra RMg = CMg (vale para qualquer firma). Para o monopolista, isso implica P > CMg, gerando peso morto: produz menos que o socialmente eficiente.",4:"Revise as políticas: regulação (ADASA, ANEEL), antitruste (CADE), propriedade pública, ou nada. E concorrência monopolística: muitas firmas, produtos diferenciados, lucro zero no longo prazo, mas P > CMg."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

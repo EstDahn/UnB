@@ -1,0 +1,112 @@
+---
+title: "Tópico Complementar: Uma Introdução Rápida ao Pacote `lubridate`"
+subtitle: "Computação em Estatística II"
+author: "Prof. Donald M. Pianto"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+---
+
+## 1. A Motivação: Por que `lubridate`?
+
+Trabalhar com datas e horários em R pode ser complicado. Frequentemente, recebemos dados onde as datas são textos (`character`) e estão em formatos variados:
+
+* `"2025-09-16"`
+* `"September 16th, 2025"`
+* `"16/09/25"`
+
+Além disso, muitas vezes os componentes de data (ano, mês, dia) vêm em colunas separadas. O pacote `lubridate`, que faz parte do `tidyverse`, foi criado para tornar essas tarefas de manipulação de datas incrivelmente simples e intuitivas.
+
+```{r setup}
+library(tidyverse)
+# O lubridate já é carregado com o tidyverse, mas é uma boa prática ser explícito
+library(lubridate) 
+library(dados) # Para o dataset voos
+```
+
+---
+
+## 2. O Essencial: Criando Datas a partir de Strings
+
+A tarefa mais comum é converter uma string em um objeto de data. O `lubridate` tem funções auxiliares "mágicas" para isso. O nome da função corresponde à ordem em que os componentes de ano (`y`), mês (`m`) e dia (`d`) aparecem na sua string.
+
+```{r lubridate-parsers}
+# Formato Ano-Mês-Dia
+ymd("2025-09-16")
+
+# Formato Mês-Dia-Ano (funciona com nomes de meses!)
+mdy("September 16th, 2025")
+
+# Formato Dia-Mês-Ano
+dmy("16-Set-2025")
+```
+Note que o `lubridate` é inteligente o suficiente para lidar com diferentes separadores (`-`, `/`, espaço, etc.). O mesmo padrão se aplica a data-horas, adicionando `_hms` ao final da função (ex: `ymd_hms()`).
+
+---
+
+## 3. Criando Datas a partir de Componentes Individuais
+
+Outro cenário comum, como no dataset `voos`, é ter o ano, o mês e o dia em colunas separadas. A função `make_date()` resolve isso de forma elegante.
+
+```{r make-date-exemplo}
+# Visualizando as colunas originais
+voos |> 
+  select(ano, mes, dia) |> 
+  head()
+
+# Combinando-as para criar uma nova coluna de data
+voos |> 
+  select(ano, mes, dia) |> 
+  mutate(data_completa = make_date(ano, mes, dia)) |> 
+  head()
+```
+O análogo para data-horas, se você também tiver colunas para hora, minuto e segundo, é a função `make_datetime()`.
+
+---
+
+## 4. Primeira Aplicação: Extraindo Componentes
+
+Uma vez que temos um objeto de data, podemos facilmente extrair seus componentes para análise. `lubridate` oferece funções intuitivas para isso: `year()`, `month()`, `mday()` (dia do mês) e `wday()` (dia da semana).
+
+Isso é extremamente útil para agrupar dados e encontrar padrões, como a quantidade de voos por dia da semana.
+
+```{r extrair-componentes-exemplo}
+# 1. Primeiro, criamos a coluna de data-hora da partida
+voos_dt <- voos |> 
+  filter(!is.na(horario_saida)) |>
+  mutate(
+    saida_dt = make_datetime(ano, mes, dia, horario_saida %/% 100, horario_saida %% 100)
+  )
+
+# 2. Agora, extraímos o dia da semana e plotamos
+voos_dt |> 
+  mutate(dia_semana = wday(saida_dt, label = TRUE, abbr = FALSE)) |> 
+  ggplot(aes(x = dia_semana)) +
+  geom_bar() +
+  labs(
+    title = "Número de Voos por Dia da Semana",
+    x = "Dia da Semana",
+    y = "Contagem"
+  )
+```
+
+---
+
+## 5. Conclusão e Próximos Passos
+
+Hoje vimos como o `lubridate` resolve os dois problemas mais comuns com datas:
+
+1.  **Ler (parse)** datas de textos em diferentes formatos (`ymd`, `mdy`, `dmy`).
+2.  **Criar** datas a partir de colunas de componentes (`make_date`).
+
+Também vimos como **extrair** informações úteis de objetos de data para criar visualizações e sumários.
+
+O `lubridate` tem muito mais poder, incluindo ferramentas para fazer cálculos com datas (durações e períodos) e para lidar com a complexidade de fusos horários. Exploraremos esses tópicos avançados em uma aula futura.

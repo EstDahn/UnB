@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz - Aula 12: Contas Nacionais</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.72em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Contas Nacionais</h1>
+<p>Quiz Adaptativo — Aula 12 · Introdução à Economia · UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreensão de <strong>PIB: definição, componentes e PIB real vs. nominal</strong> (Mankiw, Cap. 23).<br>Se errar uma questão principal, você receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"O IBGE divulga que o PIB do Brasil em 2023 foi de aproximadamente R$ 10,9 trilhões.",texto:"O PIB é definido como:",alternativas:["A soma de todas as vendas de qualquer bem no país","O valor de mercado de todos os bens e serviços FINAIS produzidos em um país em um período","O lucro total das empresas brasileiras","O total de salários pagos no país"],correta:1,explicacao:"PIB = <strong>valor de mercado</strong> de <strong>todos os bens e serviços finais</strong> <strong>produzidos</strong> em um <strong>país</strong> em um <strong>período</strong>. 'Finais' evita dupla contagem; 'produzidos' exclui revenda; 'no país' é territorial."},
+{principio:1,tipo:"principal",contexto:"Cadeia produtiva do pão: agricultor vende trigo por R$ 1 ao moinho; moinho vende farinha por R$ 2 à padaria; padaria vende o pão por R$ 5 ao consumidor.",texto:"Quanto entra no PIB pela venda do pão?",alternativas:["R$ 8 (soma de todas as etapas)","R$ 5 (apenas o bem final)","R$ 2 (apenas a farinha)","R$ 1 (apenas o trigo)"],correta:1,explicacao:"Apenas o <strong>bem final</strong> conta (R$ 5). Trigo e farinha são <strong>bens intermediários</strong>, já contidos no preço do pão. Equivalente: somar valores adicionados (1 + 1 + 3 = 5)."},
+{principio:1,tipo:"principal",contexto:"Em 2025, foram realizadas as seguintes transações no Brasil: (a) Maria vende seu carro usado para João por R$ 30.000; (b) o corretor que intermediou ganhou R$ 1.500 de comissão.",texto:"Quanto entra no PIB de 2025?",alternativas:["R$ 31.500 (as duas transações)","R$ 30.000 (o carro)","R$ 1.500 (apenas a comissão)","Nada das duas"],correta:2,explicacao:"O carro <strong>já entrou no PIB</strong> no ano em que foi produzido. Revenda não conta. Mas a <strong>comissão</strong> é um <strong>serviço prestado em 2025</strong>, então sim, entra (R$ 1.500)."},
+{principio:1,tipo:"reforco",contexto:"O PIB conta apenas o que é PRODUZIDO no PERÍODO e o que é FINAL (não intermediário).",texto:"Qual destes NÃO entra no PIB brasileiro do ano corrente?",alternativas:["O corte de cabelo que você faz hoje","O Fiat novo que você compra na concessionária","A farinha que a padaria comprou para fazer pão (e o pão também já foi vendido)","O salário de uma professora da rede pública"],correta:2,explicacao:"A farinha é <strong>bem intermediário</strong>: já está embutida no preço do pão final. Contá-la separadamente seria <strong>dupla contagem</strong>."},
+{principio:2,tipo:"principal",contexto:"PIB pela ótica da despesa: PIB = C + I + G + X − M (a partir da identidade Origem = Destinação: PIB + M = C + I + G + X).",texto:"Petrobras constrói uma nova plataforma de petróleo. Em qual componente do PIB entra esse gasto?",alternativas:["Consumo (C)","Investimento (I)","Gastos do governo (G)","Exportações (X)"],correta:1,explicacao:"Construção de novas plataformas é <strong>formação bruta de capital fixo</strong> — entra em <strong>Investimento (I)</strong>. Atenção: I é produção de novos bens de capital, NÃO compra de ações ou Tesouro Direto."},
+{principio:2,tipo:"principal",contexto:"O governo federal paga R$ 1.000 de Bolsa Família a uma família, que gasta R$ 800 em alimentos e R$ 200 em remédios.",texto:"Quanto desse fluxo entra no PIB?",alternativas:["R$ 1.000 em G (governo)","R$ 1.000 em C (consumo)","R$ 1.000 em ambos","R$ 1.000 em C (consumo) — o Bolsa Família em si é transferência e não entra"],correta:3,explicacao:"<strong>Transferências</strong> (Bolsa Família, aposentadorias) <strong>não entram</strong> no PIB diretamente — não pagam por produção. Mas quando a família gasta o dinheiro em alimentos e remédios, esses gastos entram em <strong>C</strong>."},
+{principio:2,tipo:"principal",contexto:"Brasil exporta soja para a China por R$ 20 bi e importa fertilizantes da Rússia por R$ 8 bi.",texto:"O efeito líquido sobre o PIB é:",alternativas:["+R$ 28 bilhões (soma)","+R$ 12 bilhões (X − M)","-R$ 12 bilhões (M − X)","Zero (importações e exportações se anulam sempre)"],correta:1,explicacao:"X soma <strong>R$ 20 bi</strong> (produção nacional vendida fora) e M subtrai <strong>R$ 8 bi</strong> (são bens estrangeiros que já entraram em C, I, G ou X e precisam ser removidos para isolar a produção interna). Resultado: <strong>+R$ 12 bi</strong>."},
+{principio:2,tipo:"reforco",contexto:"Em economia, INVESTIMENTO (I no PIB) tem significado específico.",texto:"Qual destes é INVESTIMENTO no sentido do PIB?",alternativas:["Você compra R$ 5.000 em ações da Vale","Uma fábrica compra uma máquina nova de R$ 5.000","Você aplica R$ 5.000 no Tesouro Direto","Você compra um carro usado de R$ 5.000"],correta:1,explicacao:"Investimento no PIB = <strong>produção de novos bens de capital</strong> (máquinas, prédios, equipamentos). Ações e Tesouro são <strong>aplicações financeiras</strong> (poupança), não investimento macroeconômico. Carro usado não foi produzido este ano."},
+{principio:3,tipo:"principal",contexto:"Uma economia produz só pão. Em 2020: 1.000 pães a R$ 5. Em 2025: 1.100 pães a R$ 10.",texto:"O crescimento REAL do PIB entre 2020 e 2025 foi de:",alternativas:["120% (PIB nominal mais que dobrou)","100%","10% (apenas a quantidade aumentou)","0%"],correta:2,explicacao:"PIB nominal: 5.000 → 11.000 (mistura preço e quantidade). PIB <strong>real</strong> a preços de 2020: 5×1.000 = 5.000 e 5×1.100 = 5.500. Crescimento real = <strong>10%</strong> = crescimento da quantidade."},
+{principio:3,tipo:"principal",contexto:"O jornal informa: 'PIB nominal cresceu 9% em 2025; inflação medida pelo deflator foi 5%.'",texto:"O crescimento REAL aproximado do PIB foi:",alternativas:["14%","9%","≈ 4% (nominal − inflação)","-5%"],correta:2,explicacao:"Crescimento real ≈ <strong>crescimento nominal − inflação</strong> = 9% − 5% = <strong>4%</strong>. Os outros 5% não foram mais produção, só preços maiores."},
+{principio:3,tipo:"principal",contexto:"PIB nominal de 2025 = R$ 12 trilhões. PIB real de 2025 (a preços de 2020) = R$ 8 trilhões.",texto:"O deflator do PIB em 2025 é:",alternativas:["100","120","150","200"],correta:2,explicacao:"Deflator = (PIB nominal / PIB real) × 100 = (12/8) × 100 = <strong>150</strong>. Significa que os preços de 2025 são 50% maiores que os preços do ano-base 2020."},
+{principio:3,tipo:"reforco",contexto:"PIB real usa preços de um ano-base fixo. PIB nominal usa preços do ano corrente.",texto:"Por que o PIB REAL é mais útil que o PIB nominal para comparar épocas?",alternativas:["Porque é sempre maior","Porque elimina o efeito da inflação e permite comparar a QUANTIDADE produzida","Porque é mais fácil de calcular","Porque inclui mais bens"],correta:1,explicacao:"O PIB <strong>real</strong> isola a variação de <strong>quantidade</strong> produzida (preços fixos). É o que importa para saber se a economia realmente cresceu, e não apenas se os preços subiram."}
+];
+var NOMES={1:"PIB (conceitos)",2:"Componentes do PIB",3:"PIB real vs nominal"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=3;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=3;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem PIB, seus componentes e a distinção entre real e nominal.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e o Capítulo 23 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=3;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise a definição de PIB: valor de mercado, todos os bens FINAIS, produzidos, no país, em um período. Bens intermediários NÃO entram (evita dupla contagem). Revenda de bens antigos também não entra.",2:"Revise os componentes: PIB = C + I + G + X − M, derivada da identidade Origem = Destinação. Cuidado: 'I' é produção de novos bens de capital (máquinas, construção), NÃO ações. 'G' são compras governamentais, NÃO transferências (Bolsa Família). O '−M' subtrai todas as importações dentro de C, I, G e X para isolar a produção interna.",3:"Revise: PIB nominal usa preços do ano; PIB real usa preços de ano-base fixo. Deflator = (nominal/real) × 100. Crescimento real ≈ crescimento nominal − inflação."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

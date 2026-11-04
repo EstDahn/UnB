@@ -1,0 +1,110 @@
+---
+title: "Nota de Aula: Fluxos de Trabalho para Operações Agrupadas"
+subtitle: "Comparando `nest-map-unnest` com `group_by-reframe`"
+author: "Prof. Donald M. Pianto"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Na nossa primeira aula sobre `purrr`, introduzimos o poderoso fluxo de trabalho `nest() |> map() |> unnest()` para realizar operações em subconjuntos de dados (o padrão "split-apply-combine").
+
+Este padrão continua sendo fundamental, especialmente para tarefas complexas como modelagem. No entanto, com a evolução do `dplyr`, surgiu uma abordagem mais direta para muitos problemas comuns.
+
+Nesta nota, vamos comparar os dois fluxos de trabalho resolvendo o mesmo problema: ajustar um modelo linear para cada grupo de cilindros (`cyl`) no dataset `mtcars` e extrair seus coeficientes.
+
+```{r setup}
+# Pacotes necessários para os exemplos
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(broom) # Para a função tidy()
+```
+
+---
+
+## 1. O Fluxo de Trabalho com `nest-map-unnest`
+
+Este é o padrão clássico e conceitualmente muito claro. A lógica é transformar os grupos de dados em uma "coluna-lista" (`list-column`), onde cada item da lista é um data frame.
+
+**Lógica dos Passos:**
+
+1.  **`nest(.by = grupo)`:** Agrupa os dados e "aninha" todas as colunas, exceto a de agrupamento, em uma nova coluna chamada `data`. Agora, temos uma linha por grupo.
+2.  **`mutate(modelo = map(data, ...))`:** Usa `purrr::map()` para iterar sobre a coluna `data`, aplicando uma função a cada sub-data frame (cada grupo). Aqui, ajustamos um modelo `lm()` a cada um.
+3.  **`unnest(resultado)`:** Desempacota a coluna-lista que contém os resultados (neste caso, os coeficientes do modelo) de volta para o formato de data frame longo.
+
+### Exemplo de Código
+
+```{r nest-map-unnest}
+# O fluxo "clássico" com list-columns
+modelo_nest <- mtcars |>
+  # 1. Aninhar os dados por cilindro
+  nest(.by = cyl) |> 
+  # 2. Aplicar a modelagem a cada sub-dataframe
+  mutate(
+    modelo = map(data, ~ lm(mpg ~ wt, data = .x)),
+    coeficientes = map(modelo, tidy)
+  ) |> 
+  # 3. Desempacotar os resultados
+  unnest(coeficientes)
+
+print(modelo_nest)
+```
+
+**Vantagens:**
+
+* **Explícito:** Cada passo da lógica "split-apply-combine" é um comando explícito.
+* **Poderoso para Modelagem:** Permite guardar objetos complexos, como o próprio objeto do modelo (`modelo`), em uma coluna para inspeções futuras. É a base do ecossistema `tidymodels`.
+
+---
+
+## 2. O Fluxo de Trabalho Direto com `reframe()`
+
+Com as versões mais recentes do `dplyr`, muitas tarefas podem ser feitas de forma mais concisa, mantendo a estrutura agrupada e usando uma função que entende como operar em cada grupo.
+
+**Lógica dos Passos:**
+
+1.  **`group_by(grupo)`:** Agrupa o data frame. As operações seguintes serão aplicadas a cada grupo individualmente.
+2.  **`reframe(...)`:** Aplica uma função a cada grupo. `reframe()` é uma variação de `summarise()` que permite que a função retorne **múltiplas linhas** por grupo, o que é perfeito para extrair múltiplos coeficientes de um modelo.
+
+### Exemplo de Código
+
+```{r reframe}
+# O fluxo "moderno" e mais direto
+modelo_reframe <- mtcars |>
+  # 1. Agrupar os dados
+  group_by(cyl) |>
+  # 2. Aplicar a função que retorna múltiplas linhas a cada grupo
+  # `pick(everything())` passa os dados do grupo atual para a função lm()
+  reframe(tidy(lm(mpg ~ wt, data = pick(everything()))))
+
+print(modelo_reframe)
+```
+
+**Vantagens:**
+
+* **Conciso:** Menos linhas de código para obter o mesmo resultado final.
+* **Direto:** Não requer a criação e desempacotamento explícito de colunas-lista, tornando o código mais linear para tarefas de sumarização.
+
+---
+
+## Conclusão: Qual Usar?
+
+Nenhum dos fluxos está "errado" ou "antigo". A escolha depende da complexidade da sua tarefa.
+
+* Use o **fluxo `nest-map-unnest`** quando precisar de um controle mais fino, especialmente se quiser **reter objetos complexos** (como modelos, gráficos ou listas) para cada grupo. É o padrão-ouro para modelagem iterativa.
+
+* Use o **fluxo `group_by-reframe`** para **sumarizações e extrações diretas**, quando seu objetivo principal é o data frame final de resultados e você não precisa guardar os objetos intermediários. É mais rápido e legível para essas tarefas.
+
+Entender ambos os padrões torna você um programador `tidyverse` mais flexível e eficaz.
+

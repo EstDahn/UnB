@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Adaptativo — Aula 5: Elasticidade e Políticas do Governo</title>
+<style>
+:root{--destaque:#bf0021;--verde:#008000;--azul:#0066cc;--cinza:#646464;--amarelo:#ffc107;--laranja:#e67e22;--bg:#f8f9fa;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:#333;line-height:1.6}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:linear-gradient(135deg,var(--destaque),#8b0015);color:#fff;text-align:center;padding:32px 16px}
+header h1{font-size:1.6em;margin-bottom:4px}
+header p{font-size:.95em;opacity:.9}
+#tela-inicio{text-align:center;padding:40px 16px}
+#tela-inicio p{margin-bottom:20px;font-size:1.05em;color:var(--cinza)}
+.btn-principal{background:var(--destaque);color:#fff;border:none;padding:14px 40px;font-size:1.1em;border-radius:8px;cursor:pointer;transition:background .2s}
+.btn-principal:hover{background:#8b0015}
+#painel-progresso{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:16px 0;padding:12px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.principio-badge{text-align:center;padding:6px 2px;border-radius:6px;font-size:.72em;font-weight:600;transition:all .3s;border:2px solid #ddd;background:#f5f5f5;color:var(--cinza)}
+.principio-badge.acertou{background:#d4edda;border-color:var(--verde);color:var(--verde)}
+.principio-badge.errou{background:#f8d7da;border-color:var(--destaque);color:var(--destaque)}
+.principio-badge.reforco{background:#fff3cd;border-color:var(--amarelo);color:#856404}
+.principio-badge .num{font-size:1.3em;display:block}
+#card-questao{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;margin:16px 0}
+.questao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.questao-tag{background:var(--azul);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8em;font-weight:600}
+.questao-tag.reforco-tag{background:var(--laranja)}
+.questao-contador{font-size:.85em;color:var(--cinza)}
+.questao-contexto{background:#e8f4fd;border-left:4px solid var(--azul);padding:12px 16px;margin-bottom:16px;border-radius:0 8px 8px 0;font-size:.95em}
+.questao-texto{font-size:1.05em;font-weight:500;margin-bottom:20px}
+.alternativas{list-style:none}
+.alternativa{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.95em;transition:all .2s}
+.alternativa:hover:not(.disabled){border-color:var(--azul);background:#f0f7ff}
+.alternativa.correta{border-color:var(--verde);background:#d4edda;font-weight:600}
+.alternativa.incorreta{border-color:var(--destaque);background:#f8d7da}
+.alternativa.disabled{cursor:default;opacity:.7}
+.alternativa.disabled.correta{opacity:1}
+.feedback{margin-top:16px;padding:16px;border-radius:8px;display:none;font-size:.95em}
+.feedback.acerto{background:#d4edda;border:1px solid var(--verde);color:#155724}
+.feedback.erro{background:#f8d7da;border:1px solid var(--destaque);color:#721c24}
+.feedback h4{margin-bottom:6px}
+.btn-proximo{display:none;margin-top:16px;padding:10px 28px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;transition:background .2s}
+.btn-proximo:hover{background:#004a99}
+#tela-resultado{display:none;text-align:center;padding:32px 16px}
+#tela-resultado h2{margin-bottom:8px;color:var(--destaque)}
+.nota-final{font-size:3em;font-weight:700;margin:16px 0}
+.nota-final.boa{color:var(--verde)}.nota-final.media{color:var(--laranja)}.nota-final.baixa{color:var(--destaque)}
+#resultado-detalhes{text-align:left;margin:24px 0;background:var(--card);border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#resultado-detalhes h3{margin-bottom:12px;color:var(--azul)}
+.resultado-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:.92em}
+.resultado-item:last-child{border-bottom:none}
+.resultado-icone{font-size:1.3em;margin-right:10px;width:28px;text-align:center}
+.resultado-nome{flex:1}
+.resultado-status{font-weight:600;font-size:.85em;padding:2px 10px;border-radius:12px}
+.status-dominado{background:#d4edda;color:#155724}
+.status-reforcar{background:#fff3cd;color:#856404}
+.status-revisar{background:#f8d7da;color:#721c24}
+.dica-estudo{margin-top:20px;padding:16px;background:#e8f4fd;border-radius:8px;text-align:left;font-size:.93em}
+.dica-estudo h4{color:var(--azul);margin-bottom:8px}
+.dica-estudo ul{margin-left:20px}
+.dica-estudo li{margin-bottom:4px}
+.btn-reiniciar{margin-top:20px;padding:12px 32px;background:var(--destaque);color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer}
+@media(max-width:500px){#painel-progresso{grid-template-columns:repeat(2,1fr);gap:4px}.principio-badge{font-size:.65em;padding:4px 1px}header h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<header>
+<h1>Elasticidade e Políticas do Governo</h1>
+<p>Quiz Adaptativo — Aula 5 · Introdução à Economia · UnB</p>
+</header>
+<div class="container">
+<div id="tela-inicio">
+<p>Este quiz avalia sua compreensão de <strong>elasticidade da demanda, elasticidade da oferta, impostos e controles de preço</strong> (Mankiw, Cap. 5-6).<br>Se errar, você receberá uma <strong>explicação</strong> e um <strong>exercício de reforço</strong>.</p>
+<button class="btn-principal" onclick="iniciarQuiz()">Começar Quiz</button>
+</div>
+<div id="painel-progresso" style="display:none"></div>
+<div id="card-questao" style="display:none">
+<div class="questao-header"><span class="questao-tag" id="tag-principio"></span><span class="questao-contador" id="contador"></span></div>
+<div class="questao-contexto" id="contexto"></div>
+<div class="questao-texto" id="texto-questao"></div>
+<ul class="alternativas" id="alternativas"></ul>
+<div class="feedback" id="feedback"></div>
+<button class="btn-proximo" id="btn-proximo" onclick="proximaQuestao()">Próxima →</button>
+</div>
+<div id="tela-resultado">
+<h2>Resultado Final</h2>
+<div class="nota-final" id="nota-final"></div>
+<p id="msg-resultado"></p>
+<div id="resultado-detalhes"></div>
+<div class="dica-estudo" id="dica-estudo" style="display:none"></div>
+<button class="btn-reiniciar" onclick="location.reload()">Refazer Quiz</button>
+</div>
+</div>
+<script>
+var BANCO=[
+{principio:1,tipo:"principal",contexto:"Pense em bens do dia a dia cujo consumo quase não muda quando o preço varia — como sal de cozinha ou remédios essenciais.",texto:"O que significa dizer que a demanda por um bem é \"inelástica\"?",alternativas:["A quantidade demandada não responde a mudanças no preço","A quantidade demandada responde pouco a mudanças no preço","A quantidade demandada responde muito a mudanças no preço","O preço não muda nunca"],correta:1,explicacao:"Inelástica (|ε| < 1) significa que a quantidade demandada reage <strong>menos que proporcionalmente</strong> ao preço. Atenção: a alternativa \"não responde\" seria demanda <strong>perfeitamente</strong> inelástica (|ε| = 0), que é um caso extremo."},
+{principio:1,tipo:"principal",contexto:"Um estudo econômico observou que, quando o preço do café subiu 10%, a quantidade demandada caiu apenas 5%.",texto:"Se o preço do café sobe 10% e a quantidade demandada cai 5%, a elasticidade-preço da demanda é:",alternativas:["0,5","2,0","1,0","0,1"],correta:0,explicacao:"ε = variação % na quantidade / variação % no preço = 5% / 10% = <strong>0,5</strong>. Como |ε| < 1, a demanda por café é <strong>inelástica</strong>: a quantidade reage menos que proporcionalmente ao preço."},
+{principio:1,tipo:"principal",contexto:"A elasticidade depende de fatores como disponibilidade de substitutos, necessidade do bem e horizonte de tempo.",texto:"Qual destes bens provavelmente tem demanda MAIS ELÁSTICA?",alternativas:["Insulina para diabéticos","Sal de cozinha","Chocolate importado de uma marca específica","Gasolina no curto prazo"],correta:2,explicacao:"Chocolate importado de marca específica tem <strong>muitos substitutos</strong> (outras marcas, outros doces, chocolate nacional). Quanto mais substitutos, mais elástica a demanda. Insulina, sal e gasolina no curto prazo têm poucos substitutos."},
+{principio:1,tipo:"reforco",contexto:"Um vendedor de açaí no Plano Piloto percebeu que a demanda por açaí é inelástica: mesmo quando ele aumenta o preço, a maioria dos clientes continua comprando.",texto:"Se a demanda é inelástica e o vendedor aumenta o preço, o que acontece com a receita total?",alternativas:["Diminui","Aumenta","Não muda","Depende da oferta"],correta:1,explicacao:"Com demanda inelástica, a queda na quantidade é <strong>proporcionalmente menor</strong> que o aumento do preço. Portanto, P × Q <strong>sobe</strong>. A receita total aumenta quando se aumenta o preço de um bem com demanda inelástica."},
+{principio:1,tipo:"principal",contexto:"Quando o preço da gasolina sobe, no curto prazo as pessoas continuam abastecendo quase a mesma quantidade. Mas com o passar dos anos, mudam seus hábitos.",texto:"No longo prazo, a demanda por gasolina tende a ser:",alternativas:["Mais inelástica que no curto prazo","Mais elástica que no curto prazo","Igual ao curto prazo","Perfeitamente inelástica"],correta:1,explicacao:"No longo prazo, consumidores encontram <strong>alternativas</strong>: comprar carro elétrico, usar transporte público, mudar para perto do trabalho. Mais tempo = mais ajustes possíveis = demanda <strong>mais elástica</strong>."},
+{principio:2,tipo:"principal",contexto:"Brasília tem uma característica urbanística única: o Plano Piloto é tombado pelo patrimônio histórico, com área e número de quadras residenciais limitados.",texto:"Apartamentos no Plano Piloto de Brasília têm oferta:",alternativas:["Elástica — fácil construir mais","Inelástica — espaço limitado, difícil construir mais","Perfeitamente elástica","Unitária"],correta:1,explicacao:"O espaço no Plano Piloto é <strong>tombado e limitado</strong>. Não se pode simplesmente construir mais quadras. Mesmo que os preços subam muito, a quantidade de apartamentos quase não aumenta — oferta <strong>inelástica</strong>."},
+{principio:2,tipo:"principal",contexto:"Pense na diferença entre o que um produtor consegue fazer em uma semana versus em cinco anos quando a demanda por seu produto aumenta.",texto:"A oferta tende a ser mais elástica:",alternativas:["No curto prazo","No longo prazo","Quando os insumos são escassos","Quando há poucas empresas no mercado"],correta:1,explicacao:"Com mais tempo, produtores conseguem <strong>ajustar capacidade</strong>, contratar trabalhadores, construir novas fábricas e investir em tecnologia. Mais tempo = mais ajustes = oferta <strong>mais elástica</strong>."},
+{principio:2,tipo:"reforco",contexto:"Uma startup de camisetas personalizadas opera com impressão sob demanda. Se receber mais pedidos, basta imprimir mais — sem limite de estoque ou espaço físico restritivo.",texto:"A oferta de camisetas dessa startup é provavelmente:",alternativas:["Inelástica — difícil aumentar a produção","Elástica — fácil ajustar a quantidade produzida","Perfeitamente inelástica — quantidade fixa","Nenhuma das alternativas"],correta:1,explicacao:"Como a produção é sob demanda e flexível, a empresa consegue <strong>aumentar a quantidade</strong> facilmente quando o preço sobe. Isso caracteriza uma oferta <strong>elástica</strong>."},
+{principio:3,tipo:"principal",contexto:"O governo brasileiro cobra impostos elevados sobre cigarros. Formalmente, o imposto é cobrado dos fabricantes na cadeia de produção.",texto:"Um imposto sobre cigarros é cobrado dos fabricantes. Quem realmente paga a maior parte?",alternativas:["Os fabricantes, já que o imposto é cobrado deles","Os consumidores, porque a demanda por cigarro é inelástica","O governo","Ninguém — o imposto não afeta o mercado"],correta:1,explicacao:"A demanda por cigarro é <strong>inelástica</strong> (vício, poucos substitutos). A regra é: o lado <strong>mais inelástico</strong> do mercado arca com a maior parte do imposto. Os consumidores acabam pagando a maior parte via preço mais alto."},
+{principio:3,tipo:"principal",contexto:"Há um debate frequente sobre se o imposto deve ser cobrado do comprador ou do vendedor. Economistas têm uma resposta clara sobre isso.",texto:"\"Não importa se o governo cobra o imposto do comprador ou do vendedor — o resultado é o mesmo.\" Essa afirmação é:",alternativas:["Verdadeira","Falsa — faz diferença de quem se cobra","Verdadeira apenas para bens elásticos","Falsa — o vendedor sempre paga mais"],correta:0,explicacao:"A <strong>incidência econômica</strong> do imposto depende das elasticidades relativas de oferta e demanda, <strong>não</strong> de quem o governo cobra formalmente. O preço final, a quantidade e a divisão do ônus são os mesmos."},
+{principio:3,tipo:"principal",contexto:"Quando o governo cobra um imposto, algumas trocas que seriam benéficas para compradores e vendedores deixam de acontecer.",texto:"O \"peso morto\" de um imposto representa:",alternativas:["O valor arrecadado pelo governo","A perda de bem-estar por transações que deixam de ocorrer","O lucro dos vendedores","A diferença entre oferta e demanda"],correta:1,explicacao:"O <strong>peso morto</strong> (deadweight loss) é a perda de eficiência: transações que seriam benéficas para ambos os lados <strong>não acontecem</strong> por causa do imposto. Essa perda não é capturada por ninguém — nem pelo governo."},
+{principio:3,tipo:"reforco",contexto:"O governo estuda criar um imposto sobre refrigerantes para desestimular o consumo e arrecadar receita. A demanda por refrigerantes é relativamente inelástica.",texto:"Se a demanda é inelástica, o peso morto desse imposto será:",alternativas:["Grande, porque muitas transações deixam de ocorrer","Pequeno, porque a quantidade demandada cai pouco","Zero, porque o governo arrecada tudo","Impossível de determinar"],correta:1,explicacao:"Quando a demanda é <strong>inelástica</strong>, a quantidade cai <strong>pouco</strong> com o imposto. Poucas transações deixam de ocorrer, então o peso morto é <strong>pequeno</strong>. Já a arrecadação é alta — por isso impostos sobre cigarros e combustíveis são populares entre governos."},
+{principio:4,tipo:"principal",contexto:"Em épocas de crise, governos às vezes tabelam preços de produtos essenciais para \"proteger\" os consumidores, fixando um preço máximo abaixo do equilíbrio.",texto:"Se o governo fixa um preço MÁXIMO (teto) abaixo do equilíbrio, o resultado é:",alternativas:["Excesso de oferta","Excesso de demanda (escassez)","O mercado volta ao equilíbrio","Aumento de preço"],correta:1,explicacao:"Com preço <strong>abaixo do equilíbrio</strong>, muita gente quer comprar (preço baixo atrai compradores) e poucos querem vender (preço baixo desestimula produtores). Resultado: <strong>falta produto</strong> — excesso de demanda."},
+{principio:4,tipo:"principal",contexto:"No Brasil, o salário mínimo é definido por lei. Em 2026, nenhum trabalhador formal pode receber menos que o valor estabelecido pelo governo.",texto:"O salário mínimo é um exemplo de:",alternativas:["Preço máximo (teto)","Preço mínimo (piso)","Imposto","Subsídio"],correta:1,explicacao:"O salário mínimo impede que o salário caia abaixo de certo valor — é um <strong>piso</strong> no mercado de trabalho. O \"preço\" do trabalho (salário) não pode ficar abaixo desse mínimo."},
+{principio:4,tipo:"principal",contexto:"Em várias cidades do mundo, governos controlam o preço dos aluguéis, fixando valores máximos para \"proteger\" inquilinos. Economistas estudam os efeitos dessas políticas há décadas.",texto:"Qual é uma consequência possível do tabelamento de aluguéis (preço máximo)?",alternativas:["Aumento na oferta de imóveis","Melhoria na qualidade dos imóveis","Surgimento de mercado negro e filas","Redução no preço de equilíbrio"],correta:2,explicacao:"Com preço tabelado <strong>abaixo do equilíbrio</strong>, há <strong>escassez</strong> de imóveis. Proprietários podem cobrar \"por fora\" (mercado negro) e inquilinos enfrentam longas filas. Além disso, proprietários têm menos incentivo para manter a qualidade dos imóveis."},
+{principio:4,tipo:"reforco",contexto:"O governo de um país fixou o preço do arroz em R$ 3 o quilo, mas o preço de equilíbrio seria R$ 5. Ao preço de R$ 3, a quantidade demandada é 100 toneladas e a ofertada é 60 toneladas.",texto:"O que acontece nesse mercado?",alternativas:["Excesso de oferta de 40 toneladas","Escassez de 40 toneladas — falta arroz","O mercado se ajusta e o preço sobe para R$ 5","A oferta aumenta para atender a demanda"],correta:1,explicacao:"Há <strong>escassez</strong> de 100 - 60 = <strong>40 toneladas</strong>. O preço teto impede o ajuste natural do mercado. A demanda supera a oferta, e o resultado são filas, racionamento e possível mercado paralelo."}
+];
+var NOMES={1:"Elast. Demanda",2:"Elast. Oferta",3:"Impostos",4:"Controles de Preço"};
+var estado={principios:{},fila:[],atual:null,indice:0,totalRespondidas:0,totalAcertos:0};
+function iniciarQuiz(){for(var i=1;i<=4;i++)estado.principios[i]={status:"pendente",tentativas:0,acertos:0};var p=BANCO.filter(function(q){return q.tipo==="principal"});embaralhar(p);estado.fila=p.slice();document.getElementById("tela-inicio").style.display="none";document.getElementById("painel-progresso").style.display="grid";document.getElementById("card-questao").style.display="block";atualizarPainel();exibirQuestao()}
+function embaralhar(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}}
+function atualizarPainel(){var p=document.getElementById("painel-progresso");p.innerHTML="";for(var i=1;i<=4;i++){var s=estado.principios[i];var b=document.createElement("div");b.className="principio-badge "+s.status;b.innerHTML='<span class="num">'+i+"</span>"+NOMES[i];p.appendChild(b)}}
+function exibirQuestao(){if(estado.indice>=estado.fila.length){mostrarResultado();return}var q=estado.fila[estado.indice];estado.atual=q;var tag=document.getElementById("tag-principio");tag.textContent=NOMES[q.principio];tag.className="questao-tag"+(q.tipo==="reforco"?" reforco-tag":"");document.getElementById("contador").textContent="Questão "+(estado.indice+1)+" de "+estado.fila.length+(q.tipo==="reforco"?" (reforço)":"");document.getElementById("contexto").innerHTML=q.contexto;document.getElementById("texto-questao").innerHTML=q.texto;var ul=document.getElementById("alternativas");ul.innerHTML="";for(var i=0;i<q.alternativas.length;i++){var li=document.createElement("li");var btn=document.createElement("button");btn.className="alternativa";btn.innerHTML="<strong>"+String.fromCharCode(97+i)+")</strong> "+q.alternativas[i];btn.setAttribute("data-idx",i);btn.onclick=function(){responder(parseInt(this.getAttribute("data-idx")))};li.appendChild(btn);ul.appendChild(li)}document.getElementById("feedback").style.display="none";document.getElementById("feedback").className="feedback";document.getElementById("btn-proximo").style.display="none";document.getElementById("card-questao").scrollIntoView({behavior:"smooth",block:"start"})}
+function responder(escolha){var q=estado.atual;var botoes=document.querySelectorAll(".alternativa");var acertou=escolha===q.correta;for(var i=0;i<botoes.length;i++){botoes[i].classList.add("disabled");botoes[i].onclick=null;if(i===q.correta)botoes[i].classList.add("correta");if(i===escolha&&!acertou)botoes[i].classList.add("incorreta")}var p=estado.principios[q.principio];p.tentativas++;estado.totalRespondidas++;var fb=document.getElementById("feedback");if(acertou){p.acertos++;estado.totalAcertos++;if(p.status!=="errou")p.status="acertou";else p.status="reforco";fb.className="feedback acerto";fb.innerHTML="<h4>✓ Correto!</h4><p>"+q.explicacao+"</p>"}else{if(q.tipo==="principal"){p.status="errou";var r=null;for(var j=0;j<BANCO.length;j++){if(BANCO[j].principio===q.principio&&BANCO[j].tipo==="reforco"){r=BANCO[j];break}}if(r)estado.fila.splice(estado.indice+1,0,r)}else{p.status="errou"}fb.className="feedback erro";fb.innerHTML="<h4>✗ Incorreto</h4><p>"+q.explicacao+"</p>"+(q.tipo==="principal"?"<p style='margin-top:8px'><strong>→ Exercício de reforço a seguir.</strong></p>":"")}fb.style.display="block";document.getElementById("btn-proximo").style.display="inline-block";atualizarPainel()}
+function proximaQuestao(){estado.indice++;exibirQuestao()}
+function mostrarResultado(){document.getElementById("card-questao").style.display="none";document.getElementById("tela-resultado").style.display="block";var pct=Math.round(estado.totalAcertos/estado.totalRespondidas*100);var ne=document.getElementById("nota-final");ne.textContent=pct+"%";ne.className="nota-final "+(pct>=80?"boa":pct>=50?"media":"baixa");var me=document.getElementById("msg-resultado");if(pct>=80)me.textContent="Excelente! Você compreendeu bem elasticidade e políticas do governo.";else if(pct>=50)me.textContent="Bom progresso! Alguns conceitos precisam de revisão.";else me.textContent="Revise as notas de aula e os Capítulos 5-6 do Mankiw.";var det=document.getElementById("resultado-detalhes");det.innerHTML="<h3>Desempenho por Conceito</h3>";var revisar=[];for(var i=1;i<=4;i++){var p=estado.principios[i];var ic,sc,st;if(p.status==="acertou"){ic="✅";sc="status-dominado";st="Dominado"}else if(p.status==="reforco"){ic="🔄";sc="status-reforcar";st="Reforçado"}else if(p.status==="errou"){ic="❌";sc="status-revisar";st="Revisar";revisar.push(i)}else{ic="⬜";sc="status-pendente";st="Pendente"}det.innerHTML+='<div class="resultado-item"><span class="resultado-icone">'+ic+'</span><span class="resultado-nome"><strong>'+NOMES[i]+'</strong></span><span class="resultado-status '+sc+'">'+st+"</span></div>"}if(revisar.length>0){var sug={1:"Revise o conceito de elasticidade-preço da demanda: ε = %ΔQ / %ΔP. Demanda inelástica (|ε|<1) significa que a quantidade reage pouco ao preço. Lembre-se dos fatores: substitutos, necessidade, horizonte de tempo e receita total.",2:"Revise elasticidade da oferta: depende da flexibilidade dos produtores para ajustar a quantidade. No longo prazo a oferta é mais elástica. Recursos fixos (como terreno no Plano Piloto) tornam a oferta inelástica.",3:"Revise a incidência dos impostos: não importa de quem o governo cobra — o lado mais inelástico paga mais. O peso morto representa transações perdidas. Impostos sobre bens inelásticos geram mais arrecadação e menos peso morto.",4:"Revise controles de preço: teto abaixo do equilíbrio causa escassez; piso acima do equilíbrio causa excesso. Exemplos: tabelamento de aluguéis (teto) e salário mínimo (piso). Consequências incluem mercado negro, filas e perda de qualidade."};var d=document.getElementById("dica-estudo");d.style.display="block";var h="<h4>📖 Sugestões de estudo</h4><ul>";for(var k=0;k<revisar.length;k++)h+="<li><strong>"+NOMES[revisar[k]]+":</strong> "+sug[revisar[k]]+"</li>";d.innerHTML=h+"</ul>"}atualizarPainel()}
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+---
+title: "`Leaflet` vs. `Plotly`"
+author: "Gemini instruida por dmp"
+format: 
+  html:
+    toc: true
+    toc-depth: 2
+    embed-resources: true
+---
+
+## Leaflet
+Propósito Principal: É uma biblioteca de MAPEAMENTO. O leaflet é, na sua essência, uma interface para a biblioteca JavaScript Leaflet.js, que é o padrão da indústria para mapas interativos na web. O seu único e exclusivo propósito é criar mapas ricos e em camadas.
+
+### Pontos fortes:
+
+* Controlo Cartográfico Total: Dá-lhe controlo total sobre os elementos do mapa: camadas de base (tiles como OpenStreetMap, imagens de satélite, etc. com addProviderTiles), sobreposição de polígonos, marcadores, linhas, e a forma como interagem.
+
+* Ecossistema Maduro: Por ser focado em mapas, possui uma vasta gama de plugins e extensões para funcionalidades complexas como heatmaps, clusters de marcadores, e muito mais.
+
+* Performance com Dados Geoespaciais: É altamente otimizado para renderizar grandes quantidades de dados geográficos (polígonos, pontos).
+
+### Pontos Fracos:
+
+* Tooltips Manuais: A customização de tooltips e popups requer a construção de strings HTML com sprintf() ou paste(). Embora isto dê flexibilidade total, exige um passo extra e um conhecimento mínimo de HTML.
+
+## Plotly
+Propósito Principal: É uma biblioteca de GRÁFICOS INTERATIVOS. O plotly foi desenhado para tornar qualquer tipo de gráfico (barras, linhas, dispersão, etc.) interativo. A sua capacidade de fazer mapas é uma feature dentro de um ecossistema de visualização de dados muito mais amplo.
+
+### Pontos fortes:
+
+* Integração Perfeita com ggplot2: A sua "arma secreta" é a função ggplotly(). Você pode pegar qualquer mapa estático que já criou com ggplot2 e geom_sf e, com uma única linha de código (ggplotly(meu_mapa_ggplot)), torná-lo interativo.
+
+* Tooltips Automáticos: Esta é a grande vantagem que você notou. O plotly cria automaticamente os tooltips com base nas variáveis que você mapeou na função aes() do seu ggplot. É "magia" que funciona sem esforço.
+
+### Pontos fracos (no contexto de mapas):
+
+* Menos Controlo Cartográfico: É muito mais difícil (ou impossível) trocar as camadas de base (os tiles do mapa de fundo), como faria no leaflet. Os mapas do plotly são, na sua maioria, "desenhos" de polígonos sobre um fundo geográfico pré-definido.
+
+* Foco nos Dados, Não no Mapa: O plotly é excelente para visualizar dados num mapa, mas o leaflet é melhor para criar uma experiência de mapa.

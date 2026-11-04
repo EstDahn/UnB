@@ -1,0 +1,134 @@
+---
+title: "Laboratório 3"
+author: "Daniel Gonçalves Gomes Ferreira - 251019566"
+output: html_document
+---
+
+```{r message=FALSE}
+
+library(tidyverse)
+
+```
+
+# PARTE 1
+
+##### EXERCÍCIO 1:
+
+```{r}
+elephants = read.csv("ElephantsMF.csv")
+```
+
+##### EXERCÍCIO 2:
+
+```{r}
+head(elephants)
+```
+
+##### EXERCÍCIO 3:
+
+```{r}
+
+ggplot(elephants) +
+  geom_point(aes(Age, Height))
+
+```
+
+##### EXERCÍCIO 4:
+
+```{r}
+
+MM = mean(elephants$Height[elephants$Sex == "M"])
+
+MF = mean(elephants$Height[elephants$Sex == "F"])
+
+
+MM
+MF
+```
+
+##### EXERCÍCIO 5:
+
+```{r}
+
+ggplot(elephants, aes(Sex,Height))+
+  geom_boxplot(aes(reorder(Sex, Height, FUN = median)))
+```
+
+##### EXERCÍCIO 6:
+
+```{r}
+
+Ex6Ele = filter(elephants, Age > 14)
+
+NMM = mean(Ex6Ele$Height[Ex6Ele$Sex == "M"])
+
+NMF = mean(Ex6Ele$Height[Ex6Ele$Sex == "F"])
+
+
+NMM
+NMF
+
+```
+
+# Parte 2:
+
+##### EXERCÍCIO 7:
+
+```{r}
+diabetes = read.csv("diabetes_012_health_indicators_BRFSS2015.csv")
+```
+
+##### EXERCÍCIO 8:
+
+```{r}
+str(diabetes)
+```
+
+##### EXERCÍCIO 9:
+
+```{r}
+
+diabetes$Sex = as.factor(diabetes$Sex)
+levels(diabetes$Sex) = c("F","M")
+
+```
+
+##### EXERCÍCIO 10:
+
+```{r}
+
+ggplot( diabetes, aes(Diabetes_012) ) + 
+  geom_bar( aes(fill = Sex)) 
+
+```
+
+##### EXERCÍCIO 11:
+
+```{r}
+ggplot( diabetes, aes(Diabetes_012) ) + 
+  geom_bar( aes(fill = Sex), 
+            position = "fill") 
+```
+
+##### EXERCÍCIO 12:
+
+```{r}
+ggplot(diabetes,aes(x = BMI))+
+  geom_histogram(aes( fill = Sex))+
+  facet_wrap(~Sex)
+
+
+```
+
+##### EXERCÍCIO 13:
+
+```{r}
+ggplot(diabetes,aes(x = BMI))+
+  geom_histogram(aes(y = after_stat(density),fill = Sex),binwidth = 5)+
+  geom_density(color = "black")+
+  facet_wrap(~Sex)
+
+```
+
+
+

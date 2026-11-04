@@ -1,0 +1,185 @@
+---
+title: "Introdução à Separação de Strings com Delimitadores"
+subtitle: "Baseado no Capítulo 14.4 de R4DS"
+author: "Adaptado por Gemini"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Antes de mergulharmos no poder das expressões regulares, é fundamental entender as ferramentas mais diretas para um problema muito comum: extrair múltiplas informações que estão agrupadas em uma única coluna de texto.
+
+Nestas notas, vamos focar na família de funções `separate_*` do `tidyr` que trabalham com **delimitadores** — caracteres como vírgulas, hifens ou pontos que separam os dados. Em particular, vamos nos aprofundar na função `separate_wider_delim()` e, mais importante, em como diagnosticar e resolver os problemas que surgem quando os dados não estão perfeitamente formatados.
+
+```{r setup}
+# Carregando pacotes necessários
+library(tidyverse)
+```
+
+---
+
+## Separando em Colunas com `separate_wider_delim`
+
+A função `separate_wider_delim()` é usada quando queremos transformar uma única coluna de texto em **múltiplas novas colunas**. Isso é útil quando cada string tem um número fixo de componentes separados por um delimitador consistente.
+
+Para usar a função, precisamos fornecer três coisas:
+1. O data frame.
+2. A coluna que queremos separar.
+3. O `delim` (delimitador) que separa as informações.
+4. O argumento `names`, um vetor de caracteres com os nomes das novas colunas.
+
+Por exemplo, no data frame abaixo, a coluna `x` contém um código, uma edição e um ano, todos separados por um ".".
+
+```{r separate-wider-exemplo}
+df3 <- tibble(x = c("a10.1.2022", "b10.2.2011", "e15.1.2015"))
+
+df3 |> 
+  separate_wider_delim(
+    x,
+    delim = ".",
+    names = c("código", "edição", "ano")
+  )
+```
+
+Se uma das partes não for útil para a análise, podemos usar `NA` no vetor `names` para descartá-la.
+
+```{r separate-wider-na}
+df3 |> 
+  separate_wider_delim(
+    x,
+    delim = ".",
+    names = c("código", NA, "ano")
+  )
+```
+
+---
+
+## Diagnosticando Problemas
+
+O mundo real é confuso, e raramente nossos dados estão perfeitamente formatados. `separate_wider_delim()` espera um número fixo de partes para cada linha. O que acontece quando isso não ocorre?
+
+A função nos dará um erro, mas, crucialmente, ela também nos guiará sobre como diagnosticar e resolver o problema com os argumentos `too_few` (poucas partes) e `too_many` (muitas partes).
+
+### Lidando com Poucas Partes (`too_few`)
+
+Vamos considerar um data frame onde algumas strings não têm o número esperado de 3 partes separadas por "-".
+
+```{r too-few-setup}
+df <- tibble(x = c("1-1-1", "1-1-2", "1-3", "1-3-2", "1"))
+```
+
+Tentar separar isso diretamente resulta em um erro informativo.
+
+```{r, error=TRUE}
+df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z")
+  )
+```
+
+O erro sugere usar `too_few = "debug"` para investigar. Vamos fazer isso.
+
+```{r too-few-debug}
+# Nota: O warning gerado aqui é esperado e informativo.
+debug <- df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_few = "debug"
+  )
+
+debug
+```
+
+O modo de depuração adiciona novas colunas (`x_ok`, `x_pieces`, `x_remainder`). A coluna `x_ok` é particularmente útil para filtrar e inspecionar apenas as linhas que falharam.
+
+```{r too-few-filter}
+debug |> filter(!x_ok)
+```
+
+Após a depuração, se decidirmos que as partes ausentes devem ser preenchidas com `NA`, podemos usar `too_few = "align_start"`. Isso alinha as partes existentes à esquerda e preenche o resto com `NA`.
+
+```{r too-few-align}
+df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_few = "align_start"
+  )
+```
+
+### Lidando com Muitas Partes (`too_many`)
+
+O problema oposto também pode ocorrer. Aqui, algumas strings têm mais do que as 3 partes esperadas.
+
+```{r too-many-setup}
+df <- tibble(x = c("1-1-1", "1-1-2", "1-3-5-6", "1-3-2", "1-3-5-7-9"))
+```
+
+Novamente, a tentativa direta resulta em um erro que nos orienta.
+
+```{r, error=TRUE}
+df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z")
+  )
+```
+
+Usando o modo de depuração, a coluna `x_remainder` se torna útil, mostrando exatamente quais partes sobraram.
+
+```{r too-many-debug}
+# Nota: O warning gerado aqui é esperado e informativo.
+debug <- df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_many = "debug"
+  )
+
+debug |> filter(!x_ok)
+```
+
+Temos duas estratégias principais para lidar com partes em excesso:
+
+1.  **`too_many = "drop"`**: Descarta silenciosamente as partes extras.
+2.  **`too_many = "merge"`**: Funde todas as partes extras (e seus delimitadores) na última coluna especificada.
+
+```{r too-many-drop}
+# Descartando as partes extras
+df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_many = "drop"
+  )
+```
+
+```{r too-many-merge}
+# Unindo as partes extras na última coluna
+df |> 
+  separate_wider_delim(
+    x,
+    delim = "-",
+    names = c("x", "y", "z"),
+    too_many = "merge"
+  )
+```

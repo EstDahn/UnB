@@ -1,0 +1,307 @@
+---
+title: "Criando Mapas em R: Uma Abordagem Moderna com o Tidyverse"
+author: "Prof. Donald M. Pianto"
+date: "2025-09-30"
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-fold: false
+lang: pt
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Introdução
+
+O uso de mapas é uma ferramenta poderosa na análise de dados, especialmente quando nossas observações estão associadas a localizações geográficas. A visualização espacial nos permite identificar padrões, tendências e correlações que não seriam óbvias em tabelas ou gráficos tradicionais.
+
+Nesta aula, aprenderemos um fluxo de trabalho moderno e integrado para criar mapas em R, focando em duas abordagens: mapas **estáticos** para relatórios e publicações, e mapas **interativos** para exploração de dados.
+
+### Pré-requisitos
+
+Para esta aula, precisaremos de pacotes do ecossistema `tidyverse` e de outros especializados em dados geoespaciais.
+
+```{r setup_pacotes, message=FALSE, warning=FALSE}
+# install.packages(c("tidyverse", "geobr", "sf", "leaflet", "here", "ipeadatar", "rnaturalearth", "gapminder", "plyr"))
+library(tidyverse)
+library(geobr)
+library(sf)
+library(leaflet)
+library(here)
+library(ipeadatar)
+library(rnaturalearth)
+library(gapminder)
+```
+
+## 1. Ferramentas e Conceitos Essenciais
+
+Antes de criar nosso primeiro mapa, vamos entender as ferramentas e conceitos fundamentais.
+
+### 1.1 O Pacote `sf` (Simple Features)
+
+O pacote `sf` é a base do nosso trabalho com dados espaciais. Ele representa dados geográficos (vetoriais) de uma forma muito intuitiva: como um `tibble` que possui uma coluna especial, geralmente chamada `geometry` ou `geom`.
+
+Esta coluna `geom` armazena as informações de geometria, que podem ser de vários tipos:
+
+* **POINT:** Um único ponto no espaço (X, Y). Útil para representar a localização de cidades, hospitais ou eventos.
+* **LINESTRING:** Uma sequência de pontos conectados. Útil para representar rios, estradas ou rotas.
+* **POLYGON:** Uma área fechada. Útil para representar áreas como países, estados ou municípios.
+* **MULTIPOLYGON:** Um conjunto de polígonos. Necessário para representar entidades geográficas compostas por múltiplas áreas separadas (ex: um estado com ilhas).
+
+A grande vantagem do `sf` é que, por ser um data frame, podemos usar todos os verbos do `dplyr` (`filter`, `mutate`, `left_join`, etc.) que já conhecemos.
+
+### 1.2 O Pacote `geobr`
+
+O pacote `geobr` resolve o complexo processo de obtenção de "shapefiles" (arquivos de mapa) do Brasil, permitindo baixar dados geográficos oficiais do IBGE diretamente no R, já no formato `sf`.
+
+`geobr` oferece acesso a diversas granularidades de dados. Algumas funções importantes são:
+
+* `read_country()`: Limites do país.
+* `read_region()`: Limites das 5 grandes regiões.
+* `read_state()`: Limites dos estados.
+* `read_municipality()`: Limites de todos os municípios do Brasil.
+* E muitas outras (biomas, áreas de saúde, setores censitários com `read_census_tract()`, etc.).
+
+### 1.3 Sistemas de Referência de Coordenadas (CRS)
+
+Cada dado geoespacial possui um Sistema de Referência de Coordenadas (CRS), que define como as coordenadas 2D do mapa se relacionam com a superfície 3D da Terra.
+
+* **`geobr` usa SIRGAS 2000 (ex: EPSG:4674):** O sistema de referência geodésico oficial para o Brasil.
+* **Mapas Web (`leaflet`) usam WGS 84 (ex: EPSG:4326):** O padrão global, usado por GPS e a maioria dos serviços de mapa online.
+
+A boa notícia é que o pacote `sf` lida com a **reprojeção automática** na maioria dos casos. Quando você passa um objeto `sf` com CRS SIRGAS 2000 para o `leaflet`, o `sf` o converte para WGS 84 nos bastidores.
+
+---
+
+## 2. Parte 1: Mapa Estático com `ggplot2`
+
+Nosso objetivo será criar um mapa coroplético (um mapa onde as áreas são coloridas de acordo com uma variável estatística) da taxa de desocupação nos estados brasileiros.
+
+### 2.1 Obtendo e Preparando os Dados
+
+Vamos juntar nossos dados espaciais (do `geobr`) com dados de atributo (do IPEA).
+
+::: {.callout-note}
+#### Como Encontrar Dados no `ipeadatar`?
+Os códigos das séries de dados do IPEA podem mudar ou ser descontinuados. Se um código como `"PNAD12_TDESOC12"` não for encontrado, você pode pesquisar por séries disponíveis usando `ipeadatar::available_series()`, especificando a língua. Por exemplo:
+
+`available_series(language = "br") |> filter(str_detect(name, "desemprego")) |> view()`
+
+Isso permite encontrar o código mais recente para os dados que você precisa. Para este exemplo, o código atualizado é `"PNADCT_TXDSCUPUF"`
+:::
+
+```{r obter_dados_atributo}
+# --- Código de como os dados foram originalmente obtidos (executar uma vez) ---
+#
+# 0. Verificar se os dados estão no diretório `dados` do projeto
+nome_arquivo <- "PNADCT_TXDSCUPUF.csv"
+caminho_pasta <- here::here("dados")
+caminho_arquivo <- here::here("dados", nome_arquivo)
+#
+if (file.exists(caminho_arquivo)) {
+  # Carregar os dados
+  dados_desocupacao_raw <- read_csv(caminho_arquivo)
+} else {
+  # Baixar os dados usando o código da série atualizado
+  dados_desocupacao_raw <- ipeadata("PNADCT_TXDSCUPUF")
+  # Verificamos se a pasta "dados" existe. Se não, a criamos.
+  if (!dir.exists(caminho_pasta)) {
+    message("Pasta 'dados' não encontrada. Criando a pasta...")
+    dir.create(caminho_pasta)
+  }
+  write_csv(dados_desocupacao_raw, caminho_arquivo)
+}
+
+# 2. Filtrar para um período específico (2º trimestre de 2025) e limpar
+dados_desocupacao <- dados_desocupacao_raw |>
+  filter(date == as.Date("2025-04-01"), uname == "States") |>
+  select(tcode, value) |>
+  rename(code_state = tcode, taxa_desocupacao = value)
+
+```
+
+Agora, obtemos os dados espaciais e os juntamos com os dados de atributo usando o código do estado.
+
+```{r juntar_dados_estaticos, cache=TRUE}
+# 1. Baixar os polígonos de todos os estados do Brasil
+todos_estados <- read_state(year = 2020)
+
+# 2. Juntar (join) os dados espaciais com os dados de atributo
+mapa_dados <- todos_estados |>
+  left_join(dados_desocupacao, by = c("code_state"))
+```
+
+### 2.2 Criando o Mapa
+
+Com os dados `sf` preparados, usamos `ggplot2` e `geom_sf` para plotar.
+
+::: {.callout-note}
+#### A Coluna Mágica `geom`
+Você notará que não precisamos dizer ao `ggplot2` para usar a coluna `geom`. Ferramentas "espacialmente conscientes" em R, como `geom_sf()`, são projetadas para identificar e usar automaticamente a coluna de geometria de um objeto `sf`.
+:::
+
+```{r mapa_estatico}
+ggplot(data = mapa_dados) +
+  geom_sf(aes(fill = taxa_desocupacao), color = "white", linewidth = 0.2) +
+  scale_fill_gradient(low = "#feebe2", high = "#7a0177", name = "Taxa (%)") +
+  theme_void() +
+  labs(
+    title = "Taxa de Desocupação por Estado no Brasil",
+    subtitle = "2º Trimestre de 2025",
+    caption = "Fonte: IBGE/PNAD Contínua via IPEADATA. Malha espacial: IBGE/geobr."
+  )
+```
+
+### 2.3 Exemplo Adicional: Mapa-múndi com `ggplot2`
+
+A mesma lógica se aplica a dados globais. Usando o pacote `rnaturalearth`, podemos baixar os limites de todos os países e juntá-los com dados do `gapminder`.
+
+```{r mapa_mundi, cache=TRUE}
+# Baixar dados espaciais do mundo
+mundo <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Pegar dados do gapminder para um ano específico
+dados_gapminder_2007 <- gapminder |>
+  filter(year == 2007)
+
+# Comparar os nomes que estão nos dois bancos
+# Obter os nomes de cada banco
+paises_mapa <- unique(mundo$name_en)
+paises_dados <- unique(as.character(gapminder$country))
+
+# Vetor 1: Países que estão nos DADOS, mas não têm par no MAPA
+dados_sem_par_mapa <- setdiff(paises_dados, paises_mapa)
+
+# Criar um dicionário de correção MANUAL
+dicionario_manual <- c(
+  "China" = "People's Republic of China",
+  "Congo, Dem. Rep." = "Democratic Republic of the Congo",
+  "Congo, Rep." = "Republic of the Congo",
+  "Cote d'Ivoire" = "Ivory Coast",
+  "Gambia" = "The Gambia",
+  "Hong Kong, China" = "Hong Kong",
+  "Korea, Dem. Rep." = "North Korea",
+  "Korea, Rep." = "South Korea",
+  "Sao Tome and Principe" = "São Tomé and Príncipe",
+  "Slovak Republic" = "Slovakia",
+  "Swaziland" = "Eswatini",
+  "United States" = "United States of America",
+  "Yemen, Rep." = "Yemen",
+  "West Bank and Gaza" = "Palestine"
+)
+
+# Aplicar o dicionário de correção manual
+dados_gapminder_2007 <- dados_gapminder_2007 |>
+  mutate(country_padronizado = 
+           plyr::mapvalues(country,
+                           from = names(dicionario_manual),
+                           to = dicionario_manual,
+                           warn_missing = FALSE))
+
+
+# Juntar os dados espaciais com os dados do gapminder
+mundo_dados <- mundo |>
+  left_join(dados_gapminder_2007, by = c("name_en" = "country_padronizado"))
+
+# Criar o mapa-múndi
+ggplot(data = mundo_dados) +
+  geom_sf(aes(fill = lifeExp), color = "white", linewidth = 0.1) +
+  scale_fill_viridis_c(option = "plasma", name = "Expectativa\nde Vida") +
+  theme_void() +
+  labs(
+    title = "Expectativa de Vida ao Redor do Mundo em 2007",
+    caption = "Fonte: Gapminder & Natural Earth"
+  )
+```
+
+---
+
+## 3. Parte 2: Mapa Interativo com `leaflet`
+
+Mapas interativos são ótimos para exploração. O pacote `leaflet` é o padrão para isso em R e, como vimos, também entende objetos `sf` diretamente.
+
+### 3.1 Criando o Mapa Interativo
+
+A sintaxe do `leaflet` usa o operador pipe (`|>`). Construímos o mapa camada por camada.
+
+```{r mapa_interativo, cache=TRUE}
+# Criar uma paleta de cores
+paleta_cores <- colorNumeric(
+  palette = "YlOrRd", # Paleta que varia de Amarelo -> Laranja -> Vermelho
+  domain = mapa_dados$taxa_desocupacao
+)
+
+# Criar rótulos (labels) para o hover do mouse
+rotulos_mapa <- sprintf(
+  "<strong>%s</strong><br/>Taxa de Desocupação: %g%%",
+  mapa_dados$name_state,
+  mapa_dados$taxa_desocupacao
+) |> lapply(htmltools::HTML)
+
+# Construir o mapa interativo
+leaflet(mapa_dados) |>
+  addTiles() |>
+  addPolygons(
+    fillColor = ~paleta_cores(taxa_desocupacao),
+    weight = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlightOptions = highlightOptions(
+      weight = 3,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE
+    ),
+    label = rotulos_mapa,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto"
+    )
+  ) |>
+  # Adiciona a legenda, agora invertida
+  addLegend(
+    pal = paleta_cores, 
+    values = ~taxa_desocupacao, 
+    opacity = 0.7, 
+    title = "Taxa de Desocupação (%)",
+    position = "bottomright",
+    # Inverte a ordem da legenda para mostrar valores altos no topo
+    labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE))
+  )
+```
+
+---
+
+## Exercício em Aula (Já resolvido)
+
+Para consolidar os conceitos, tente criar um mapa coroplético dos municípios do estado de São Paulo.
+
+**Passos:**
+
+1.  **Dados Espaciais:** Use `geobr::read_municipality(code_muni = "SP")` para baixar os polígonos dos municípios de São Paulo.
+2.  **Dados de Atributo:** Crie uma nova variável nos Dados Espaciais que represente um valor fictício. Se o arquivo for `sp_sf` faça algo como 
+`sp_sf <- sp_sf |> mutate(idh_ficticio = runif(n()))`.
+3.  **Crie um mapa estático** com `ggplot2` colorindo os municípios pela sua variável inventada.
+
+
+```{r espaco_exercicio, eval=TRUE, cache=TRUE}
+# 1. Baixar dados dos municípios de SP
+sp_sf <- read_municipality(code_muni = "SP", year = 2020)
+
+# 2. Adicionar dados de atributo (ex: idh)
+sp_sf <- sp_sf |> mutate(idh_ficticio = runif(n()))
+
+# 3. Plotar com ggplot2
+ggplot(data = sp_sf) +
+  geom_sf(aes(fill = idh_ficticio), color = NA) + # color = NA remove as bordas
+  theme_void() +
+  labs(fill = "IDH Fictício")
+```

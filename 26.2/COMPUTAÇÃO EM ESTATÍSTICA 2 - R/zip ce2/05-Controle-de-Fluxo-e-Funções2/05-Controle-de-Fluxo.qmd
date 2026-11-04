@@ -1,0 +1,266 @@
+---
+title: "Advanced R, 2ª Edição: Resumo do Capítulo 5"
+subtitle: "Controle de Fluxo"
+author: "Resumido por Gemini (baseado em Hadley Wickham)"
+date: today
+date-format: "D [de] MMMM [de] YYYY"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    theme: cosmo
+    code-fold: false
+execute:
+  warning: false
+  message: false
+---
+
+## Introdução
+
+Este documento resume os principais pontos do Capítulo 5, "Controle de Fluxo", do livro "Advanced R, 2ª Edição" de Hadley Wickham. O controle de fluxo permite que seu código tome decisões e execute ações repetidamente. As duas principais ferramentas para isso são:
+
+* **Escolhas (Choices)**, como `if` e `switch()`, que permitem executar códigos diferentes dependendo da entrada.
+* **Laços (Loops)**, como `for` e `while`, que permitem executar um código múltiplas vezes.
+
+*Nota: Conforme solicitado, quaisquer arquivos de imagem ou dados para este documento seriam organizados nas pastas `img/` e `data/`, respectivamente.*
+
+## Escolhas
+
+### A declaração `if`
+
+A forma mais comum de controlar o fluxo é a declaração `if`. Sua sintaxe é:
+
+`if (condição) {bloco_verdadeiro} else {bloco_falso}`
+
+O R não possui uma sintaxe "elif", então você pode encadear múltiplas condições usando `else if`.
+
+```{r}
+# Exemplo de uma função de classificação
+grade <- function(x) {
+  if (x > 90) {
+    "A"
+  } else if (x > 80) {
+    "B"
+  } else if (x > 50) {
+    "C"
+  } else {
+    "F"
+  }
+}
+```
+
+#### Condições
+
+A `condição` em um `if` deve ser avaliada como um único `TRUE` ou `FALSE`. Se for um vetor, você receberá um aviso; se for `NA`, um erro.
+
+```{r, error = TRUE}
+# Um vetor lógico de comprimento > 1 gera um aviso
+if (c(TRUE, FALSE)) {}
+
+# NA gera um erro
+if (NA) {}
+```
+
+Uma declaração `if` é uma expressão, o que significa que ela retorna um valor. O valor retornado é o resultado do último comando executado no bloco escolhido. Se nenhum bloco for executado (por exemplo, `if(FALSE) { 1 }`), a chamada retorna `NULL` invisivelmente.
+
+```{r}
+x <- 5
+
+# O valor retornado por este if/else é atribuído a 'y'
+y <- if (x > 0) {
+  10 
+} else {
+  0
+}
+y
+
+# Exemplo de uma condição FALSE sem um bloco else
+z <- if (x < 0) {
+  10
+}
+# z é NULL
+z
+```
+
+### `ifelse()`
+
+A função `ifelse()` é uma versão vetorizada da declaração `if`. Ela tem três argumentos: um teste lógico, um vetor de valores para quando o teste é `TRUE`, e um vetor de valores para quando o teste é `FALSE`.
+
+```{r}
+# Exemplo com ifelse()
+x <- 1:10
+ifelse(x %% 2 == 0, "par", "ímpar")
+```
+
+Como `ifelse()` é vetorizado, ele pode lidar com valores `NA` tanto no teste quanto nos valores de retorno.
+
+```{r}
+x <- c(NA, 1, 2, -1, 0)
+sqrt(ifelse(x >= 0, x, NA_real_))
+```
+A função `dplyr::if_else()` é uma alternativa mais estrita que `ifelse()`. Ela verifica se os resultados `TRUE` e `FALSE` são do mesmo tipo, o que pode evitar surpresas.
+
+### `switch()`
+
+A função `switch()` é uma alternativa compacta para múltiplas declarações `if` quando se está testando o mesmo valor repetidamente.
+
+Existem duas formas de `switch()`, dependendo se você está passando uma posição (número) ou um nome (caractere) como primeiro argumento.
+
+```{r}
+# Forma numérica: o primeiro argumento é um índice
+switch(
+  2, 
+  "a",
+  "b",
+  "c"
+)
+
+# Forma de caractere: o primeiro argumento é um nome
+x_op <- "somar"
+switch(
+  x_op,
+  somar = 1 + 2,
+  subtrair = 1 - 2
+)
+```
+
+Se um nome não for encontrado, `switch()` retorna `NULL` invisivelmente. É uma boa prática fornecer um valor padrão:
+
+```{r}
+switch(
+  "multiplicar",
+  somar = 1 + 2,
+  subtrair = 1 - 2,
+  "default" # valor padrão
+)
+```
+
+É possível fazer com que múltiplos casos executem a mesma ação, deixando seus valores vazios:
+
+```{r}
+# Casos "x" e "y" executam o mesmo código
+switch("y", x = , y = 2, z = 3)
+```
+
+## Laços (Loops)
+
+Laços (ou loops) são úteis para repetir uma computação para diferentes entradas. Embora os *functionals* (que veremos no Capítulo 9) sejam geralmente alternativas melhores, ainda é importante entender como os loops funcionam.
+
+### `for`
+
+O loop `for` é a estrutura de iteração mais importante em R. Sua sintaxe é:
+
+`for (variável in sequência) { corpo }`
+
+#### Formas comuns de iterar
+
+Existem quatro maneiras comuns de iterar:
+
+1.  **Sobre os elementos:** `for (x in xs)` - útil para efeitos colaterais, como desenhar um gráfico.
+2.  **Sobre os índices numéricos:** `for (i in seq_along(xs))` - útil se você precisa saber a posição do elemento.
+3.  **Sobre os nomes:** `for (nm in names(xs))` - útil se você precisa usar o nome do elemento.
+4.  **Sobre os índices e os valores:** Não há uma forma direta em R, mas pode-se simular: `for (i in seq_along(xs)) { name <- names(xs)[[i]]; value <- xs[[i]] }`.
+
+#### Armadilhas comuns
+
+Existem algumas armadilhas comuns com loops `for` que devem ser evitadas.
+
+##### Armadilha 1: Modificar o objeto no lugar
+
+É raro usar um loop `for` para modificar um objeto no lugar. O código abaixo não modifica o data frame `mtcars` porque o loop opera em uma cópia de `mtcars`, não no data frame original.
+
+```{r}
+for (col in mtcars) {
+  col <- (col - min(col, na.rm = TRUE)) / 
+    (max(col, na.rm = TRUE) - min(col, na.rm = TRUE))
+}
+# O mtcars original não foi alterado
+head(mtcars, 2)
+```
+
+##### Armadilha 2: Loop sobre `1:length(x)`
+
+Evite o padrão `for (i in 1:length(x))`. Ele falha de maneira inesperada quando `x` tem comprimento zero. Em vez disso, use `seq_along(x)`, que sempre retorna uma sequência segura.
+
+```{r}
+x <- numeric()
+
+# Falha inesperada
+1:length(x)
+
+# Abordagem segura
+seq_along(x)
+```
+
+##### Armadilha 3: Não pré-alocar a saída
+
+É ineficiente "aumentar" um vetor a cada iteração do loop, pois o R precisa copiar todos os dados a cada passo.
+
+```{r}
+# Abordagem ineficiente (não execute para listas grandes)
+output <- c()
+for (i in 1:5) {
+  output <- c(output, i ^ 2)
+}
+output
+```
+A abordagem correta é pré-alocar um container (como um vetor ou lista) com o tamanho final e preenchê-lo dentro do loop.
+
+```{r}
+# Abordagem eficiente
+n <- 5
+output <- vector("double", n) # 1. Pré-alocar
+for (i in seq_along(output)) {
+  output[[i]] <- i ^ 2        # 2. Preencher
+}
+output
+```
+
+### Laços `while` e `repeat`
+
+Além do `for`, o R possui outros dois laços:
+
+* **`while (condição) { ação }`**: Executa a `ação` enquanto a `condição` for `TRUE`.
+* **`repeat { ação }`**: Executa a `ação` indefinidamente, até que encontre um `break`.
+
+Esses laços são mais flexíveis, mas é sua responsabilidade garantir que eles terminem.
+
+```{r}
+# Exemplo de while: simula o número de lançamentos de moeda até obter 3 caras.
+caras <- 0
+lancamentos <- 0
+while (caras < 3) {
+  if (runif(1) < 0.5) {
+    caras <- caras + 1
+  }
+  lancamentos <- lancamentos + 1
+}
+lancamentos
+```
+
+### Saídas antecipadas
+
+Existem duas maneiras de terminar um loop antecipadamente:
+
+* **`next`**: Pula para a próxima iteração.
+* **`break`**: Sai do loop completamente.
+
+```{r}
+# Exemplo com next para imprimir apenas números ímpares
+for (i in 1:10) {
+  if (i %% 2 == 0) {
+    next # Pula os números pares
+  }
+  print(i)
+}
+
+# Exemplo com break para parar quando uma condição for atendida
+for (i in 1:100) {
+  print(i)
+  if (i > 5) {
+    break # Para o loop após imprimir 6
+  }
+}
+```
