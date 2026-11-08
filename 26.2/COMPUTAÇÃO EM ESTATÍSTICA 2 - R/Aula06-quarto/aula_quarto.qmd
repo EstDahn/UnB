@@ -1,0 +1,32 @@
+---
+title: "Introdução ao Quarto"
+author: "Thais"  
+format: html
+fontsize: 30px
+date: "09/16/2026"
+fig-width: 5
+code-line-numbers: true
+editor: visual
+---
+
+# Texto no quarto
+
+Nessa aula veremos uma introdução ao *Quarto*. No texto podemos usar **fontes** [formato html]{style="color:blue"}.
+
+# Equações
+
+A raiz de x vale 4, ou seja, $\sqrt{x} = 4$.
+
+A raiz de x vale 4, ou seja,
+
+$$\sqrt{x}=4$$ {#eq-raiz4}
+
+A @eq-raiz4 mostra que ....
+
+![Título](images){fig-align="center" width="100" height="42"}
+
+1.  Passo 1
+
+2.  Passo 2
+
+3.  Passo 3

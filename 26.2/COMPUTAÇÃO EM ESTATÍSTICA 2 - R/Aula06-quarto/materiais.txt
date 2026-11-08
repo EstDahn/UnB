@@ -1,0 +1,3 @@
+https://usfws.github.io/intro-to-quarto/materials/1-overview/slides.html?utm_source=chatgpt.com#/title-slide
+
+https://quarto.org/docs/reference/
